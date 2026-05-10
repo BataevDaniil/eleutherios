@@ -1,0 +1,70 @@
+package dns
+
+import (
+	_ "embed"
+	"fmt"
+	"os"
+	"strings"
+)
+
+const (
+	ConfFile     = "/opt/etc/dnsmasq.d/eleutherios.dnsmasq"
+	BaseConfFile = "/opt/etc/dnsmasq.conf"
+	BackupFile   = "/opt/etc/dnsmasq.conf.backup"
+	InitFile     = "/opt/etc/init.d/S56dnsmasq"
+	PIDFile      = "/var/run/opt-dnsmasq.pid"
+	Port         = "9753"
+)
+
+//go:embed dnsmasq.conf
+var baseConfigTemplate string
+
+func Configure() error {
+	data := strings.Join([]string{
+		"# eleutherios: *.ru остаётся в обычном интернете",
+		"ipset=/.ru/ELEUTHERIOS_RU",
+	}, "\n") + "\n"
+	if err := os.MkdirAll("/opt/etc/dnsmasq.d", 0755); err != nil {
+		return fmt.Errorf("создание dnsmasq.d: %w", err)
+	}
+	if err := os.WriteFile(ConfFile, []byte(data), 0644); err != nil {
+		return fmt.Errorf("запись %s: %w", ConfFile, err)
+	}
+	if err := ensureBaseConfig(); err != nil {
+		return err
+	}
+	if _, err := ensureRunning(); err != nil {
+		return err
+	}
+	if err := restart(); err != nil {
+		return err
+	}
+	fmt.Printf("  dnsmasq: *.ru -> ELEUTHERIOS_RU, порт %s (%s)\n", Port, ConfFile)
+	return nil
+}
+
+func ensureBaseConfig() error {
+	text := strings.ReplaceAll(baseConfigTemplate, "@PORT", Port)
+	text = strings.TrimRight(text, "\n") + "\n"
+	if err := backupBaseConfig(); err != nil {
+		return err
+	}
+	if err := os.WriteFile(BaseConfFile, []byte(text), 0644); err != nil {
+		return fmt.Errorf("запись %s: %w", BaseConfFile, err)
+	}
+	return nil
+}
+
+func backupBaseConfig() error {
+	data, err := os.ReadFile(BaseConfFile)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return fmt.Errorf("чтение %s для backup: %w", BaseConfFile, err)
+	}
+	if err := os.WriteFile(BackupFile, data, 0644); err != nil {
+		return fmt.Errorf("запись backup %s: %w", BackupFile, err)
+	}
+	return nil
+}
