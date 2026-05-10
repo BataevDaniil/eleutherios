@@ -3,11 +3,11 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/BataevDaniil/eleutherios/boot"
-	"github.com/BataevDaniil/eleutherios/dns"
-	"github.com/BataevDaniil/eleutherios/ipset"
-	"github.com/BataevDaniil/eleutherios/iptables"
-	"github.com/BataevDaniil/eleutherios/wg"
+	"github.com/BataevDaniil/eleutherios/internal/boot"
+	"github.com/BataevDaniil/eleutherios/internal/dns"
+	"github.com/BataevDaniil/eleutherios/internal/ipset"
+	"github.com/BataevDaniil/eleutherios/internal/iptables"
+	wg2 "github.com/BataevDaniil/eleutherios/internal/wg"
 	"github.com/spf13/cobra"
 )
 
@@ -19,7 +19,7 @@ var startCmd = &cobra.Command{
 		netName, _ := cmd.Flags().GetString("net")
 
 		fmt.Println("[1/6] Поднимаем WireGuard...")
-		entName, err := wg.Up(wgCli)
+		entName, err := wg2.Up(wgCli)
 		if err != nil {
 			return fmt.Errorf("wg up: %w", err)
 		}
@@ -40,7 +40,7 @@ var startCmd = &cobra.Command{
 		}
 
 		fmt.Println("[5/6] Добавляем маршруты WireGuard...")
-		if err := wg.AddRoutes(entName); err != nil {
+		if err := wg2.AddRoutes(entName); err != nil {
 			return fmt.Errorf("wg routes: %w", err)
 		}
 

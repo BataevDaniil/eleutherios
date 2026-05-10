@@ -3,8 +3,8 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/BataevDaniil/eleutherios/boot"
-	"github.com/BataevDaniil/eleutherios/iptables"
+	"github.com/BataevDaniil/eleutherios/internal/boot"
+	iptables2 "github.com/BataevDaniil/eleutherios/internal/iptables"
 	"github.com/spf13/cobra"
 )
 
@@ -25,11 +25,11 @@ var rootCmd = &cobra.Command{
 		if !iptablesHook {
 			return cmd.Help()
 		}
-		iface, err := iptables.NetIface(hookNet)
+		iface, err := iptables2.NetIface(hookNet)
 		if err != nil {
 			return err
 		}
-		if err := iptables.RunHook(iface); err != nil {
+		if err := iptables2.RunHook(iface); err != nil {
 			return fmt.Errorf("iptables hook: %w", err)
 		}
 		return nil

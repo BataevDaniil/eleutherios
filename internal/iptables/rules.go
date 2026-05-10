@@ -5,8 +5,8 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/BataevDaniil/eleutherios/ipset"
-	"github.com/BataevDaniil/eleutherios/wg"
+	"github.com/BataevDaniil/eleutherios/internal/ipset"
+	"github.com/BataevDaniil/eleutherios/internal/wg"
 )
 
 const (

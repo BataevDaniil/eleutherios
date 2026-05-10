@@ -3,8 +3,8 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/BataevDaniil/eleutherios/network"
-	"github.com/BataevDaniil/eleutherios/wg"
+	"github.com/BataevDaniil/eleutherios/internal/network"
+	"github.com/BataevDaniil/eleutherios/internal/wg"
 	"github.com/spf13/cobra"
 )
 

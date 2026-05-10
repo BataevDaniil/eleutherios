@@ -4,7 +4,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/BataevDaniil/eleutherios/network"
+	"github.com/BataevDaniil/eleutherios/internal/network"
 )
 
 func NetIface(name string) (string, error) {

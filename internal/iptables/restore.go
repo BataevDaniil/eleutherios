@@ -5,7 +5,7 @@ import (
 	"os"
 	"os/exec"
 
-	"github.com/BataevDaniil/eleutherios/ipset"
+	"github.com/BataevDaniil/eleutherios/internal/ipset"
 )
 
 func RunHook(iface string) error {

@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/BataevDaniil/eleutherios/dns"
-	"github.com/BataevDaniil/eleutherios/ipset"
-	"github.com/BataevDaniil/eleutherios/iptables"
-	"github.com/BataevDaniil/eleutherios/wg"
+	"github.com/BataevDaniil/eleutherios/internal/dns"
+	"github.com/BataevDaniil/eleutherios/internal/ipset"
+	"github.com/BataevDaniil/eleutherios/internal/iptables"
+	"github.com/BataevDaniil/eleutherios/internal/wg"
 	"github.com/spf13/cobra"
 )
 

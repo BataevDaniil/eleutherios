@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/BataevDaniil/eleutherios/ipset"
+	"github.com/BataevDaniil/eleutherios/internal/ipset"
 )
 
 func RunFSHook() error {
