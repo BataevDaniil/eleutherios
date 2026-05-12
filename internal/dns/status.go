@@ -7,12 +7,35 @@ import (
 	"strings"
 )
 
-func Cleanup() {
-	os.Remove(ConfFile)
+func Cleanup() error {
+	if err := os.Remove(ConfFile); err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("удаление %s: %w", ConfFile, err)
+	}
+	if err := restoreBaseConfig(); err != nil {
+		return err
+	}
 	if readPID(PIDFile) != "" || pidOf("dnsmasq") != "" {
-		_ = restart()
+		if err := restart(); err != nil {
+			return err
+		}
 	}
 	fmt.Printf("  dnsmasq: конфиг %s удалён\n", ConfFile)
+	return nil
+}
+
+func restoreBaseConfig() error {
+	data, err := os.ReadFile(BackupFile)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return fmt.Errorf("чтение backup %s: %w", BackupFile, err)
+	}
+	if err := os.WriteFile(BaseConfFile, data, 0644); err != nil {
+		return fmt.Errorf("восстановление %s из %s: %w", BaseConfFile, BackupFile, err)
+	}
+	fmt.Printf("  dnsmasq: восстановлен %s из %s\n", BaseConfFile, BackupFile)
+	return nil
 }
 
 func Status() string {

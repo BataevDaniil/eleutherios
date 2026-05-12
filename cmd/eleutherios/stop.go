@@ -16,7 +16,9 @@ var stopCmd = &cobra.Command{
 	Short: "Остановить обход, вернуть всё как было",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		fmt.Println("[1/5] Убираем dnsmasq...")
-		dns.Cleanup()
+		if err := dns.Cleanup(); err != nil {
+			return fmt.Errorf("dnsmasq cleanup: %w", err)
+		}
 
 		fmt.Println("[2/5] Убираем iptables...")
 		iptables.Cleanup()
