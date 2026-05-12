@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/BataevDaniil/eleutherios/cmd"
+	"github.com/BataevDaniil/eleutherios/cmd/eleutherios"
 )
 
 func main() {
-	if err := cmd.Execute(); err != nil {
+	if err := eleutherios.Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
