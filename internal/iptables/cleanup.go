@@ -1,12 +1,13 @@
 package iptables
 
 import (
+	"context"
 	"os/exec"
 	"strings"
 )
 
-func deleteJumps(table, chain, target string) {
-	out, err := exec.Command("iptables-save", "-t", table).CombinedOutput()
+func deleteJumps(ctx context.Context, table, chain, target string) {
+	out, err := exec.CommandContext(ctx, "iptables-save", "-t", table).CombinedOutput()
 	if err != nil {
 		return
 	}
@@ -19,7 +20,7 @@ func deleteJumps(table, chain, target string) {
 			continue
 		}
 		args := append([]string{"-t", table, "-D", chain}, fields[2:]...)
-		_ = exec.Command("iptables", args...).Run()
+		_ = exec.CommandContext(ctx, "iptables", args...).Run()
 	}
 }
 

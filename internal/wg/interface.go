@@ -1,6 +1,9 @@
 package wg
 
-import "fmt"
+import (
+	"context"
+	"fmt"
+)
 
 const apiBase = "http://127.0.0.1:79/rci"
 const RouteTableID = 1001
@@ -8,9 +11,9 @@ const MarkNum = "0xd1000"
 const RulePriority = "1778"
 
 // Up поднимает WireGuard Keenetic через REST API. Возвращает linux-имя интерфейса.
-func Up(cliName string) (string, error) {
+func Up(ctx context.Context, cliName string) (string, error) {
 	requestedName := cliName
-	ifaces, err := getInterfaces()
+	ifaces, err := getInterfaces(ctx)
 	if err != nil {
 		return "", fmt.Errorf("запрос к API: %w", err)
 	}
@@ -21,13 +24,13 @@ func Up(cliName string) (string, error) {
 	}
 
 	if wg.State == "down" {
-		_, err := httpPost(apiBase+"/interface/"+cliName, `{"up":"true"}`)
+		_, err := httpPost(ctx, apiBase+"/interface/"+cliName, `{"up":"true"}`)
 		if err != nil {
 			return "", fmt.Errorf("поднять %s: %w", cliName, err)
 		}
 	}
 
-	entName, err := getEntwareName(cliName, wg)
+	entName, err := getEntwareName(ctx, cliName, wg)
 	if err != nil {
 		return "", fmt.Errorf("linux-интерфейс для %s: %w", cliName, err)
 	}
@@ -37,16 +40,16 @@ func Up(cliName string) (string, error) {
 }
 
 // Down чистит маршруты
-func Down() error {
-	execCmd("ip", "route", "flush", "table", fmt.Sprint(RouteTableID))
-	execCmd("ip", "rule", "del", "fwmark", MarkNum+"/"+MarkNum, "table", fmt.Sprint(RouteTableID), "priority", RulePriority)
-	execCmd("ip", "route", "flush", "cache")
+func Down(ctx context.Context) error {
+	execCmd(ctx, "ip", "route", "flush", "table", fmt.Sprint(RouteTableID))
+	execCmd(ctx, "ip", "rule", "del", "fwmark", MarkNum+"/"+MarkNum, "table", fmt.Sprint(RouteTableID), "priority", RulePriority)
+	execCmd(ctx, "ip", "route", "flush", "cache")
 	return nil
 }
 
 // Status возвращает список WireGuard-интерфейсов
-func Status() string {
-	ifaces, err := getInterfaces()
+func Status(ctx context.Context) string {
+	ifaces, err := getInterfaces(ctx)
 	if err != nil {
 		return "ошибка API: " + err.Error()
 	}
@@ -67,8 +70,8 @@ func Status() string {
 	return out
 }
 
-func List() string {
-	ifaces, err := getInterfaces()
+func List(ctx context.Context) string {
+	ifaces, err := getInterfaces(ctx)
 	if err != nil {
 		return "ошибка API: " + err.Error()
 	}

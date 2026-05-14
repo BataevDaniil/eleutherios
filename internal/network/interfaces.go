@@ -1,6 +1,7 @@
 package network
 
 import (
+	"context"
 	"fmt"
 	"os/exec"
 	"regexp"
@@ -11,15 +12,15 @@ var ipRegex = regexp.MustCompile(`inet ([0-9.]+)/`)
 
 // GetNetIP возвращает IP интерфейса выбранной сети
 // для Keenetic API не тянем — используем ip addr
-func GetNetIP(name string) (string, error) {
+func GetNetIP(ctx context.Context, name string) (string, error) {
 	if name == "" {
 		name = "br0"
 	}
 
-	out, err := exec.Command("ip", "addr", "show", name).CombinedOutput()
+	out, err := exec.CommandContext(ctx, "ip", "addr", "show", name).CombinedOutput()
 	if err != nil {
 		// fallback: ищем любой bridge
-		return findBridgeIP()
+		return findBridgeIP(ctx)
 	}
 
 	matches := ipRegex.FindStringSubmatch(string(out))
@@ -27,13 +28,13 @@ func GetNetIP(name string) (string, error) {
 		return matches[1], nil
 	}
 
-	return findBridgeIP()
+	return findBridgeIP(ctx)
 }
 
 // ListNetworks возвращает список доступных сетей (br0, br1...)
-func ListNetworks() []string {
+func ListNetworks(ctx context.Context) []string {
 	var nets []string
-	out, err := exec.Command("ip", "addr").CombinedOutput()
+	out, err := exec.CommandContext(ctx, "ip", "addr").CombinedOutput()
 	if err != nil {
 		return []string{"br0"}
 	}
@@ -51,11 +52,11 @@ func ListNetworks() []string {
 	return nets
 }
 
-func ResolveIface(name string) string {
+func ResolveIface(ctx context.Context, name string) string {
 	if name == "" || name == "Home" || name == "br0" {
 		return "br0"
 	}
-	for _, b := range Bridges() {
+	for _, b := range Bridges(ctx) {
 		if name == b.Name || name == b.LinuxName {
 			return b.LinuxName
 		}
@@ -63,8 +64,8 @@ func ResolveIface(name string) string {
 	return name
 }
 
-func findBridgeIP() (string, error) {
-	out, err := exec.Command("ip", "addr", "show", "br0").CombinedOutput()
+func findBridgeIP(ctx context.Context) (string, error) {
+	out, err := exec.CommandContext(ctx, "ip", "addr", "show", "br0").CombinedOutput()
 	if err != nil {
 		return "", fmt.Errorf("не найден br0: %w", err)
 	}

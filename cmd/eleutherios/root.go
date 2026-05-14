@@ -1,7 +1,9 @@
 package eleutherios
 
 import (
+	"context"
 	"fmt"
+	"time"
 
 	"github.com/BataevDaniil/eleutherios/internal/boot"
 	iptables2 "github.com/BataevDaniil/eleutherios/internal/iptables"
@@ -17,7 +19,7 @@ var rootCmd = &cobra.Command{
 	Short: "WireGuard split-tunnel: *.ru → ISP, остальное → WG",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if fsHook {
-			if err := boot.RunFSHook(); err != nil {
+			if err := boot.RunFSHook(cmd.Context()); err != nil {
 				return fmt.Errorf("fs hook: %w", err)
 			}
 			return nil
@@ -25,11 +27,11 @@ var rootCmd = &cobra.Command{
 		if !iptablesHook {
 			return cmd.Help()
 		}
-		iface, err := iptables2.NetIface(hookNet)
+		iface, err := iptables2.NetIface(cmd.Context(), hookNet)
 		if err != nil {
 			return err
 		}
-		if err := iptables2.RunHook(iface); err != nil {
+		if err := iptables2.RunHook(cmd.Context(), iface); err != nil {
 			return fmt.Errorf("iptables hook: %w", err)
 		}
 		return nil
@@ -37,7 +39,9 @@ var rootCmd = &cobra.Command{
 }
 
 func Execute() error {
-	return rootCmd.Execute()
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+	return rootCmd.ExecuteContext(ctx)
 }
 
 func init() {

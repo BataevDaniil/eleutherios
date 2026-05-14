@@ -1,21 +1,22 @@
 package dns
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
 	"strings"
 )
 
-func Cleanup() error {
+func Cleanup(ctx context.Context) error {
 	if err := os.Remove(ConfFile); err != nil && !os.IsNotExist(err) {
 		return fmt.Errorf("удаление %s: %w", ConfFile, err)
 	}
 	if err := restoreBaseConfig(); err != nil {
 		return err
 	}
-	if readPID(PIDFile) != "" || pidOf("dnsmasq") != "" {
-		if err := restart(); err != nil {
+	if readPID(PIDFile) != "" || pidOf(ctx, "dnsmasq") != "" {
+		if err := restart(ctx); err != nil {
 			return err
 		}
 	}
@@ -38,12 +39,12 @@ func restoreBaseConfig() error {
 	return nil
 }
 
-func Status() string {
+func Status(ctx context.Context) string {
 	var b strings.Builder
 	b.WriteString(fmt.Sprintf("init: %s\n", pathState(InitFile)))
 	b.WriteString(fmt.Sprintf("pid-file: %s (%s)\n", PIDFile, readPID(PIDFile)))
-	b.WriteString(fmt.Sprintf("pidof dnsmasq: %s\n", valueOr(pidOf("dnsmasq"), "нет")))
-	out, err := exec.Command(InitFile, "status").CombinedOutput()
+	b.WriteString(fmt.Sprintf("pidof dnsmasq: %s\n", valueOr(pidOf(ctx, "dnsmasq"), "нет")))
+	out, err := exec.CommandContext(ctx, InitFile, "status").CombinedOutput()
 	b.WriteString(fmt.Sprintf("$ %s status: %v\n%s\n", InitFile, err, strings.TrimSpace(string(out))))
 	b.WriteString(fmt.Sprintf("config: %s\n", pathState(ConfFile)))
 	if data, err := os.ReadFile(ConfFile); err == nil {

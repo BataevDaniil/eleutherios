@@ -1,14 +1,17 @@
 package network
 
-import "fmt"
+import (
+	"context"
+	"fmt"
+)
 
-func List() string {
-	if bridges := Bridges(); len(bridges) > 0 {
+func List(ctx context.Context) string {
+	if bridges := Bridges(ctx); len(bridges) > 0 {
 		return formatBridges(bridges)
 	}
 	out := ""
-	for _, name := range ListNetworks() {
-		ip, err := GetNetIP(name)
+	for _, name := range ListNetworks(ctx) {
+		ip, err := GetNetIP(ctx, name)
 		if err != nil {
 			ip = "-"
 		}

@@ -1,6 +1,7 @@
 package ipset
 
 import (
+	"context"
 	"fmt"
 	"os/exec"
 )
@@ -11,7 +12,7 @@ const (
 	TTL         = "86400" // 24 часа
 )
 
-func CreateSets() error {
+func CreateSets(ctx context.Context) error {
 	for _, set := range []struct {
 		name        string
 		ttl         string
@@ -24,19 +25,19 @@ func CreateSets() error {
 		if set.ttl != "" {
 			args = append(args, "timeout", set.ttl)
 		}
-		out, err := exec.Command("ipset", args...).CombinedOutput()
+		out, err := exec.CommandContext(ctx, "ipset", args...).CombinedOutput()
 		if err != nil {
 			return fmt.Errorf("ipset create %s: %w (%s)", set.name, err, out)
 		}
 	}
-	if err := FillExcluded(); err != nil {
+	if err := FillExcluded(ctx); err != nil {
 		return err
 	}
 	fmt.Printf("  ipset %s и %s созданы\n", SetRU, SetExcluded)
 	return nil
 }
 
-func FillExcluded() error {
+func FillExcluded(ctx context.Context) error {
 	reserved := []string{
 		"0.0.0.0/8",
 		"10.0.0.0/8",
@@ -50,7 +51,7 @@ func FillExcluded() error {
 		"78.47.125.180",
 	}
 	for _, ip := range reserved {
-		out, err := exec.Command("ipset", "-exist", "add", SetExcluded, ip).CombinedOutput()
+		out, err := exec.CommandContext(ctx, "ipset", "-exist", "add", SetExcluded, ip).CombinedOutput()
 		if err != nil {
 			return fmt.Errorf("ipset add %s %s: %w (%s)", SetExcluded, ip, err, out)
 		}
@@ -58,9 +59,9 @@ func FillExcluded() error {
 	return nil
 }
 
-func DestroySets() {
+func DestroySets(ctx context.Context) {
 	for _, name := range []string{SetRU, SetExcluded} {
-		exec.Command("ipset", "destroy", name).Run()
+		exec.CommandContext(ctx, "ipset", "destroy", name).Run()
 	}
 	fmt.Printf("  ipset %s и %s удалены\n", SetRU, SetExcluded)
 }

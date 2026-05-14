@@ -1,14 +1,15 @@
 package boot
 
 import (
+	"context"
 	"fmt"
 	"os"
 
 	"github.com/BataevDaniil/eleutherios/internal/ipset"
 )
 
-func RunFSHook() error {
-	return ipset.CreateSets()
+func RunFSHook(ctx context.Context) error {
+	return ipset.CreateSets(ctx)
 }
 
 func writeFSHook(bin string) error {

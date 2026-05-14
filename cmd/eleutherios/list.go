@@ -17,7 +17,7 @@ var vpnLsCmd = &cobra.Command{
 	Use:   "ls",
 	Short: "Показать WireGuard интерфейсы Keenetic",
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Print(wg.List())
+		fmt.Print(wg.List(cmd.Context()))
 	},
 }
 
@@ -30,7 +30,7 @@ var netLsCmd = &cobra.Command{
 	Use:   "ls",
 	Short: "Показать доступные bridge-сети",
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Print(network.List())
+		fmt.Print(network.List(cmd.Context()))
 	},
 }
 

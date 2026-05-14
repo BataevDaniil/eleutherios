@@ -1,34 +1,35 @@
 package dns
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
 	"strings"
 )
 
-func ensureRunning() (bool, error) {
-	if readPID(PIDFile) != "" || pidOf("dnsmasq") != "" {
+func ensureRunning(ctx context.Context) (bool, error) {
+	if readPID(PIDFile) != "" || pidOf(ctx, "dnsmasq") != "" {
 		return false, nil
 	}
 	if _, err := os.Stat(InitFile); err != nil {
 		return false, fmt.Errorf("%s не найден: установите dnsmasq-full", InitFile)
 	}
 	fmt.Println("  dnsmasq не запущен, стартуем...")
-	out, err := exec.Command(InitFile, "start").CombinedOutput()
+	out, err := exec.CommandContext(ctx, InitFile, "start").CombinedOutput()
 	if err != nil {
 		return false, fmt.Errorf("запуск dnsmasq: %w (%s)", err, out)
 	}
-	if readPID(PIDFile) == "" && pidOf("dnsmasq") == "" {
+	if readPID(PIDFile) == "" && pidOf(ctx, "dnsmasq") == "" {
 		return false, fmt.Errorf("dnsmasq не смог запуститься (%s)", out)
 	}
 	return true, nil
 }
 
-func restart() error {
-	out, err := exec.Command(InitFile, "restart").CombinedOutput()
+func restart(ctx context.Context) error {
+	out, err := exec.CommandContext(ctx, InitFile, "restart").CombinedOutput()
 	if err != nil {
-		testOut, _ := exec.Command("dnsmasq", "--test").CombinedOutput()
+		testOut, _ := exec.CommandContext(ctx, "dnsmasq", "--test").CombinedOutput()
 		return fmt.Errorf("перезапуск dnsmasq: %w (%s) test: %s", err, out, testOut)
 	}
 	return nil
@@ -42,8 +43,8 @@ func readPID(path string) string {
 	return strings.TrimSpace(string(data))
 }
 
-func pidOf(name string) string {
-	out, err := exec.Command("pidof", name).CombinedOutput()
+func pidOf(ctx context.Context, name string) string {
+	out, err := exec.CommandContext(ctx, "pidof", name).CombinedOutput()
 	if err != nil {
 		return ""
 	}

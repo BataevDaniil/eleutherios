@@ -1,15 +1,18 @@
 package wg
 
-import "fmt"
+import (
+	"context"
+	"fmt"
+)
 
-func getEntwareName(cliName string, wg *ifaceRecord) (string, error) {
-	if wg.InterfaceName != "" && ifaceExists(wg.InterfaceName) {
+func getEntwareName(ctx context.Context, cliName string, wg *ifaceRecord) (string, error) {
+	if wg.InterfaceName != "" && ifaceExists(ctx, wg.InterfaceName) {
 		return wg.InterfaceName, nil
 	}
 	if wg.Address == "" {
 		return "", fmt.Errorf("нет адреса для %s", cliName)
 	}
-	out, _ := execCmd("ip", "-4", "addr")
+	out, _ := execCmd(ctx, "ip", "-4", "addr")
 	name := findIfaceByIP(out, wg.Address)
 	if name != "" {
 		return name, nil
@@ -17,8 +20,8 @@ func getEntwareName(cliName string, wg *ifaceRecord) (string, error) {
 	return "", fmt.Errorf("не найден linux-интерфейс с IP %s", wg.Address)
 }
 
-func ifaceExists(name string) bool {
-	out, err := execCmd("ip", "link", "show", name)
+func ifaceExists(ctx context.Context, name string) bool {
+	out, err := execCmd(ctx, "ip", "link", "show", name)
 	return err == nil && out != ""
 }
 

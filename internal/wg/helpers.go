@@ -1,19 +1,31 @@
 package wg
 
 import (
+	"context"
 	"io"
 	"net/http"
 	"os/exec"
 )
 
-func httpGet(url string) (*http.Response, error) { return http.Get(url) }
-
-func httpPost(url, body string) (*http.Response, error) {
-	return http.Post(url, "application/json", io.NopCloser(newStrReader(body)))
+func httpGet(ctx context.Context, url string) (*http.Response, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return nil, err
+	}
+	return http.DefaultClient.Do(req)
 }
 
-func execCmd(name string, args ...string) (string, error) {
-	out, err := exec.Command(name, args...).CombinedOutput()
+func httpPost(ctx context.Context, url, body string) (*http.Response, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, io.NopCloser(newStrReader(body)))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	return http.DefaultClient.Do(req)
+}
+
+func execCmd(ctx context.Context, name string, args ...string) (string, error) {
+	out, err := exec.CommandContext(ctx, name, args...).CombinedOutput()
 	return string(out), err
 }
 

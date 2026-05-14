@@ -1,6 +1,7 @@
 package iptables
 
 import (
+	"context"
 	"fmt"
 	"os/exec"
 	"strings"
@@ -15,16 +16,16 @@ const (
 	DNSPort   = "9753"
 )
 
-func Setup(netName, wgName string) error {
-	iface, err := NetIface(netName)
+func Setup(ctx context.Context, netName, wgName string) error {
+	iface, err := NetIface(ctx, netName)
 	if err != nil {
 		return err
 	}
-	Cleanup()
-	if err := restoreNat(iface); err != nil {
+	Cleanup(ctx)
+	if err := restoreNat(ctx, iface); err != nil {
 		return err
 	}
-	if err := restoreMangle(iface); err != nil {
+	if err := restoreMangle(ctx, iface); err != nil {
 		return err
 	}
 	if err := InstallHook(iface); err != nil {
@@ -55,9 +56,9 @@ func mangleRules() [][]string {
 	}
 }
 
-func ensurePreroutingJump(table, iface, target string, first bool) error {
+func ensurePreroutingJump(ctx context.Context, table, iface, target string, first bool) error {
 	check := []string{"-t", table, "-C", "PREROUTING", "-i", iface, "-j", target}
-	if exec.Command("iptables", check...).Run() == nil {
+	if exec.CommandContext(ctx, "iptables", check...).Run() == nil {
 		return nil
 	}
 	args := []string{"-t", table, "-I", "PREROUTING"}
@@ -65,20 +66,20 @@ func ensurePreroutingJump(table, iface, target string, first bool) error {
 		args = append(args, "1")
 	}
 	args = append(args, "-i", iface, "-j", target)
-	out, err := exec.Command("iptables", args...).CombinedOutput()
+	out, err := exec.CommandContext(ctx, "iptables", args...).CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("iptables %s: %w (%s)", strings.Join(args, " "), err, out)
 	}
 	return nil
 }
 
-func Cleanup() {
+func Cleanup(ctx context.Context) {
 	RemoveHook()
-	deleteJumps("nat", "PREROUTING", ChainDNS)
-	deleteJumps("mangle", "PREROUTING", ChainMark)
-	_ = exec.Command("iptables", "-t", "nat", "-F", ChainDNS).Run()
-	_ = exec.Command("iptables", "-t", "nat", "-X", ChainDNS).Run()
-	_ = exec.Command("iptables", "-t", "mangle", "-F", ChainMark).Run()
-	_ = exec.Command("iptables", "-t", "mangle", "-X", ChainMark).Run()
+	deleteJumps(ctx, "nat", "PREROUTING", ChainDNS)
+	deleteJumps(ctx, "mangle", "PREROUTING", ChainMark)
+	_ = exec.CommandContext(ctx, "iptables", "-t", "nat", "-F", ChainDNS).Run()
+	_ = exec.CommandContext(ctx, "iptables", "-t", "nat", "-X", ChainDNS).Run()
+	_ = exec.CommandContext(ctx, "iptables", "-t", "mangle", "-F", ChainMark).Run()
+	_ = exec.CommandContext(ctx, "iptables", "-t", "mangle", "-X", ChainMark).Run()
 	fmt.Println("  iptables очищены")
 }

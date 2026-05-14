@@ -15,19 +15,20 @@ var stopCmd = &cobra.Command{
 	Use:   "stop",
 	Short: "Остановить обход, вернуть всё как было",
 	RunE: func(cmd *cobra.Command, args []string) error {
+		ctx := cmd.Context()
 		fmt.Println("[1/5] Убираем dnsmasq...")
-		if err := dns.Cleanup(); err != nil {
+		if err := dns.Cleanup(ctx); err != nil {
 			return fmt.Errorf("dnsmasq cleanup: %w", err)
 		}
 
 		fmt.Println("[2/5] Убираем iptables...")
-		iptables.Cleanup()
+		iptables.Cleanup(ctx)
 
 		fmt.Println("[3/5] Убираем ipset...")
-		ipset.DestroySets()
+		ipset.DestroySets(ctx)
 
 		fmt.Println("[4/5] Убираем маршруты WireGuard...")
-		wg.Down()
+		wg.Down(ctx)
 
 		fmt.Println("[5/5] Убираем автозапуск...")
 		boot.Remove()

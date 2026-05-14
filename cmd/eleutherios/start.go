@@ -15,32 +15,33 @@ var startCmd = &cobra.Command{
 	Use:   "start",
 	Short: "Запустить обход: *.ru → ISP, всё остальное → WireGuard",
 	RunE: func(cmd *cobra.Command, args []string) error {
+		ctx := cmd.Context()
 		wgCli, _ := cmd.Flags().GetString("wg")
 		netName, _ := cmd.Flags().GetString("net")
 
 		fmt.Println("[1/6] Поднимаем WireGuard...")
-		entName, err := wg2.Up(wgCli)
+		entName, err := wg2.Up(ctx, wgCli)
 		if err != nil {
 			return fmt.Errorf("wg up: %w", err)
 		}
 
 		fmt.Println("[2/6] Создаём ipset...")
-		if err := ipset.CreateSets(); err != nil {
+		if err := ipset.CreateSets(ctx); err != nil {
 			return fmt.Errorf("ipset: %w", err)
 		}
 
 		fmt.Println("[3/6] Настраиваем dnsmasq...")
-		if err := dns.Configure(); err != nil {
+		if err := dns.Configure(ctx); err != nil {
 			return fmt.Errorf("dnsmasq: %w", err)
 		}
 
 		fmt.Println("[4/6] Настраиваем iptables...")
-		if err := iptables.Setup(netName, entName); err != nil {
+		if err := iptables.Setup(ctx, netName, entName); err != nil {
 			return fmt.Errorf("iptables: %w", err)
 		}
 
 		fmt.Println("[5/6] Добавляем маршруты WireGuard...")
-		if err := wg2.AddRoutes(entName); err != nil {
+		if err := wg2.AddRoutes(ctx, entName); err != nil {
 			return fmt.Errorf("wg routes: %w", err)
 		}
 

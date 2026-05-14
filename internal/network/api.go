@@ -1,6 +1,7 @@
 package network
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"sort"
@@ -24,8 +25,12 @@ type Bridge struct {
 	Index       int
 }
 
-func Bridges() []Bridge {
-	resp, err := http.Get("http://127.0.0.1:79/rci/show/interface")
+func Bridges(ctx context.Context) []Bridge {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "http://127.0.0.1:79/rci/show/interface", nil)
+	if err != nil {
+		return nil
+	}
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil
 	}

@@ -1,6 +1,7 @@
 package wg
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -17,8 +18,8 @@ type ifaceRecord struct {
 	DefaultGateway bool   `json:"defaultgw"`
 }
 
-func getInterfaces() ([]ifaceRecord, error) {
-	resp, err := httpGet(apiBase + "/show/interface")
+func getInterfaces(ctx context.Context) ([]ifaceRecord, error) {
+	resp, err := httpGet(ctx, apiBase+"/show/interface")
 	if err != nil {
 		return nil, err
 	}

@@ -1,6 +1,7 @@
 package dns
 
 import (
+	"context"
 	_ "embed"
 	"fmt"
 	"os"
@@ -19,7 +20,7 @@ const (
 //go:embed dnsmasq.conf
 var baseConfigTemplate string
 
-func Configure() error {
+func Configure(ctx context.Context) error {
 	data := strings.Join([]string{
 		"# eleutherios: *.ru остаётся в обычном интернете",
 		"ipset=/.ru/ELEUTHERIOS_RU",
@@ -33,10 +34,10 @@ func Configure() error {
 	if err := ensureBaseConfig(); err != nil {
 		return err
 	}
-	if _, err := ensureRunning(); err != nil {
+	if _, err := ensureRunning(ctx); err != nil {
 		return err
 	}
-	if err := restart(); err != nil {
+	if err := restart(ctx); err != nil {
 		return err
 	}
 	fmt.Printf("  dnsmasq: *.ru -> ELEUTHERIOS_RU, порт %s (%s)\n", Port, ConfFile)

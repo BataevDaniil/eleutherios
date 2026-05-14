@@ -1,15 +1,16 @@
 package iptables
 
 import (
+	"context"
 	"os/exec"
 	"strings"
 
 	"github.com/BataevDaniil/eleutherios/internal/network"
 )
 
-func NetIface(name string) (string, error) {
-	name = network.ResolveIface(name)
-	out, err := exec.Command("ip", "addr").CombinedOutput()
+func NetIface(ctx context.Context, name string) (string, error) {
+	name = network.ResolveIface(ctx, name)
+	out, err := exec.CommandContext(ctx, "ip", "addr").CombinedOutput()
 	if err != nil {
 		return name, nil
 	}

@@ -1,6 +1,7 @@
 package wg
 
 import (
+	"context"
 	"fmt"
 	"regexp"
 	"strings"
@@ -9,9 +10,9 @@ import (
 var ipRegex = regexp.MustCompile(`inet ([0-9.]+)/`)
 
 // AddRoutes настраивает маршруты: отдельная таблица для WG
-func AddRoutes(name string) error {
+func AddRoutes(ctx context.Context, name string) error {
 	// получаем IP интерфейса WG
-	out, err := execCmd("ip", "addr", "show", name)
+	out, err := execCmd(ctx, "ip", "addr", "show", name)
 	if err != nil {
 		return fmt.Errorf("ip addr show %s: %w", name, err)
 	}
@@ -29,11 +30,11 @@ func AddRoutes(name string) error {
 	}
 
 	for _, args := range cmds {
-		out, err := execCmd(args[0], args[1:]...)
+		out, err := execCmd(ctx, args[0], args[1:]...)
 		if err != nil && !strings.Contains(out, "File exists") {
 			return fmt.Errorf("%s: %w (%s)", args[0], err, out)
 		}
 	}
-	_, _ = execCmd("ip", "route", "flush", "cache")
+	_, _ = execCmd(ctx, "ip", "route", "flush", "cache")
 	return nil
 }

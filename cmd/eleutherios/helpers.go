@@ -1,12 +1,13 @@
 package eleutherios
 
 import (
+	"context"
 	"fmt"
 	"os/exec"
 )
 
-func sh(name string, args ...string) (string, error) {
-	out, err := exec.Command(name, args...).CombinedOutput()
+func sh(ctx context.Context, name string, args ...string) (string, error) {
+	out, err := exec.CommandContext(ctx, name, args...).CombinedOutput()
 	return string(out), err
 }
 
