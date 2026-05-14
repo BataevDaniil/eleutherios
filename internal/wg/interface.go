@@ -3,6 +3,7 @@ package wg
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/BataevDaniil/eleutherios/internal/logging"
 )
@@ -43,9 +44,18 @@ func Up(ctx context.Context, cliName string) (string, error) {
 
 // Down чистит маршруты
 func Down(ctx context.Context) {
-	execCmd(ctx, "ip", "route", "flush", "table", fmt.Sprint(RouteTableID))
-	execCmd(ctx, "ip", "rule", "del", "fwmark", MarkNum+"/"+MarkNum, "table", fmt.Sprint(RouteTableID), "priority", RulePriority)
-	execCmd(ctx, "ip", "route", "flush", "cache")
+	cmds := [][]string{
+		{"ip", "route", "flush", "table", fmt.Sprint(RouteTableID)},
+		{"ip", "rule", "del", "fwmark", MarkNum + "/" + MarkNum, "table", fmt.Sprint(RouteTableID), "priority", RulePriority},
+		{"ip", "route", "flush", "cache"},
+	}
+	for _, args := range cmds {
+		out, err := execCmd(ctx, args[0], args[1:]...)
+		if err != nil && !strings.Contains(out, "No such file") && !strings.Contains(out, "No such process") {
+			logging.Logger().Warn("wg down команда провалилась", "component", "wireguard", "cmd", strings.Join(args, " "), "error", err, "output", strings.TrimSpace(out))
+		}
+	}
+	logging.Logger().Info("WireGuard маршруты убраны", "component", "wireguard")
 }
 
 // Status возвращает список WireGuard-интерфейсов

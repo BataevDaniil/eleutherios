@@ -33,6 +33,8 @@ exec %q --iptables-hook --net %q%s
 }
 
 func RemoveHook() {
-	_ = os.Remove(hookFile)
+	if err := os.Remove(hookFile); err != nil && !os.IsNotExist(err) {
+		logging.Logger().Warn("не удалось удалить hook файл", "component", "hook", "hook", "iptables", "file", hookFile, "error", err)
+	}
 	logging.Logger().Info("iptables hook удалён", "component", "hook", "hook", "iptables", "file", hookFile)
 }

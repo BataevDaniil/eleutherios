@@ -63,7 +63,10 @@ func FillExcluded(ctx context.Context) error {
 
 func DestroySets(ctx context.Context) {
 	for _, name := range []string{SetRU, SetExcluded} {
-		exec.CommandContext(ctx, "ipset", "destroy", name).Run()
+		out, err := exec.CommandContext(ctx, "ipset", "destroy", name).CombinedOutput()
+		if err != nil {
+			logging.Logger().Warn("ipset destroy провалился", "component", "ipset", "set", name, "error", err, "output", string(out))
+		}
 	}
 	logging.Logger().Info("ipset удалены", "component", "ipset", "set_ru", SetRU, "set_excluded", SetExcluded)
 }

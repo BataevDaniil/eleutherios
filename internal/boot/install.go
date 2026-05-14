@@ -23,8 +23,12 @@ func Install(wgName, netName string) error {
 }
 
 func Remove() {
-	_ = os.Remove(InitFile)
-	_ = os.Remove(FSHook)
+	for _, path := range []string{InitFile, FSHook} {
+		if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
+			logging.Logger().Warn("не удалось удалить файл", "component", "boot", "file", path, "error", err)
+		}
+	}
+	logging.Logger().Info("Автозапуск удалён", "component", "boot", "init_file", InitFile, "fs_hook", FSHook)
 }
 
 func writeInit(bin, wgName, netName string) error {
