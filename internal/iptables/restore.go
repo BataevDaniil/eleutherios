@@ -7,20 +7,33 @@ import (
 	"os/exec"
 
 	"github.com/BataevDaniil/eleutherios/internal/ipset"
+	"github.com/BataevDaniil/eleutherios/internal/logging"
 )
 
 func RunHook(ctx context.Context, iface string) error {
-	if os.Getenv("type") != "iptables" {
+	logger := logging.Logger()
+	hookType := os.Getenv("type")
+	table := os.Getenv("table")
+	logger.Info("iptables hook запущен", "component", "hook", "hook", "iptables", "iface", iface, "type", hookType, "table", table)
+	if hookType != "iptables" {
+		logger.Info("iptables hook пропущен", "component", "hook", "hook", "iptables", "reason", "unsupported type", "type", hookType)
 		return nil
 	}
-	switch os.Getenv("table") {
+	switch table {
 	case "nat":
-		return restoreNat(ctx, iface)
+		if err := restoreNat(ctx, iface); err != nil {
+			return err
+		}
 	case "mangle":
-		return restoreMangle(ctx, iface)
+		if err := restoreMangle(ctx, iface); err != nil {
+			return err
+		}
 	default:
+		logger.Info("iptables hook пропущен", "component", "hook", "hook", "iptables", "reason", "unsupported table", "table", table)
 		return nil
 	}
+	logger.Info("iptables hook выполнен", "component", "hook", "hook", "iptables", "iface", iface, "table", table)
+	return nil
 }
 
 func restoreNat(ctx context.Context, iface string) error {

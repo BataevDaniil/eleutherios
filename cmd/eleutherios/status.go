@@ -9,6 +9,7 @@ import (
 	"github.com/BataevDaniil/eleutherios/internal/dns"
 	"github.com/BataevDaniil/eleutherios/internal/ipset"
 	"github.com/BataevDaniil/eleutherios/internal/iptables"
+	"github.com/BataevDaniil/eleutherios/internal/logging"
 	"github.com/BataevDaniil/eleutherios/internal/wg"
 	"github.com/spf13/cobra"
 )
@@ -58,6 +59,7 @@ var statusIfaceRe = regexp.MustCompile(`^(br[0-9]+|nwg[0-9]+)$`)
 func printAddrForRelevantInterfaces(ctx context.Context) {
 	out, err := sh(ctx, "ip", "-o", "link", "show")
 	if err != nil {
+		logging.Logger().Error("shell command failed", "command", "ip", "args", []string{"-o", "link", "show"}, "error", err)
 		fmt.Printf("  $ ip -o link show\n")
 		fmt.Printf("  ОШИБКА: %v\n", err)
 		fmt.Println(indent(strings.TrimSpace(out), "    "))
@@ -100,6 +102,7 @@ func printCmd(ctx context.Context, name string, args ...string) {
 	out, err := sh(ctx, name, args...)
 	fmt.Printf("  $ %s\n", strings.Join(append([]string{name}, args...), " "))
 	if err != nil {
+		logging.Logger().Error("shell command failed", "command", name, "args", args, "error", err)
 		fmt.Printf("  ОШИБКА: %v\n", err)
 	} else {
 		fmt.Println("  OK")
@@ -111,6 +114,7 @@ func printFilteredCmd(ctx context.Context, keywords string, name string, args ..
 	out, err := sh(ctx, name, args...)
 	fmt.Printf("  $ %s\n", strings.Join(append([]string{name}, args...), " "))
 	if err != nil {
+		logging.Logger().Error("shell command failed", "command", name, "args", args, "error", err)
 		fmt.Printf("  ОШИБКА: %v\n", err)
 		fmt.Println(indent(strings.TrimSpace(out), "    "))
 		return

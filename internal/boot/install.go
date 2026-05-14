@@ -3,6 +3,8 @@ package boot
 import (
 	"fmt"
 	"os"
+
+	"github.com/BataevDaniil/eleutherios/internal/logging"
 )
 
 func Install(wgName, netName string) error {
@@ -16,7 +18,7 @@ func Install(wgName, netName string) error {
 	if err := writeFSHook(bin); err != nil {
 		return err
 	}
-	fmt.Println("  автозапуск: init.d и fs-hook установлены")
+	logging.Logger().Info("Автозапуск установлен", "component", "boot", "init_file", InitFile, "fs_hook", FSHook)
 	return nil
 }
 

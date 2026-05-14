@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"os/exec"
+
+	"github.com/BataevDaniil/eleutherios/internal/logging"
 )
 
 const (
@@ -33,7 +35,7 @@ func CreateSets(ctx context.Context) error {
 	if err := FillExcluded(ctx); err != nil {
 		return err
 	}
-	fmt.Printf("  ipset %s и %s созданы\n", SetRU, SetExcluded)
+	logging.Logger().Info("ipset созданы", "component", "ipset", "set_ru", SetRU, "set_excluded", SetExcluded)
 	return nil
 }
 
@@ -63,5 +65,5 @@ func DestroySets(ctx context.Context) {
 	for _, name := range []string{SetRU, SetExcluded} {
 		exec.CommandContext(ctx, "ipset", "destroy", name).Run()
 	}
-	fmt.Printf("  ipset %s и %s удалены\n", SetRU, SetExcluded)
+	logging.Logger().Info("ipset удалены", "component", "ipset", "set_ru", SetRU, "set_excluded", SetExcluded)
 }

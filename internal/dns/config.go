@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"os"
 	"strings"
+
+	"github.com/BataevDaniil/eleutherios/internal/logging"
 )
 
 const (
@@ -40,7 +42,7 @@ func Configure(ctx context.Context) error {
 	if err := restart(ctx); err != nil {
 		return err
 	}
-	fmt.Printf("  dnsmasq: *.ru -> ELEUTHERIOS_RU, порт %s (%s)\n", Port, ConfFile)
+	logging.Logger().Info("dnsmasq настроен", "component", "dnsmasq", "domain", "*.ru", "ipset", "ELEUTHERIOS_RU", "port", Port, "config", ConfFile)
 	return nil
 }
 

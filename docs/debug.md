@@ -6,6 +6,22 @@
 iptables-save
 ```
 
+## Логи Eleutherios
+
+Продублировать вывод команды в файл:
+
+```sh
+eleutherios start --wg Wireguard0 --net br0 --log-file /tmp/eleutherios.log
+```
+
+После такого запуска установленные NDM hook-скрипты также будут писать в этот файл.
+
+Посмотреть ошибки в сохранённом логе:
+
+```sh
+grep 'level=ERROR' /tmp/eleutherios.log
+```
+
 ## Правила Eleutherios
 
 Показать только правила Eleutherios:

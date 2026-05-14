@@ -6,6 +6,8 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+
+	"github.com/BataevDaniil/eleutherios/internal/logging"
 )
 
 func ensureRunning(ctx context.Context) (bool, error) {
@@ -15,7 +17,7 @@ func ensureRunning(ctx context.Context) (bool, error) {
 	if _, err := os.Stat(InitFile); err != nil {
 		return false, fmt.Errorf("%s не найден: установите dnsmasq-full", InitFile)
 	}
-	fmt.Println("  dnsmasq не запущен, стартуем...")
+	logging.Logger().Info("dnsmasq не запущен, стартуем", "component", "dnsmasq")
 	out, err := exec.CommandContext(ctx, InitFile, "start").CombinedOutput()
 	if err != nil {
 		return false, fmt.Errorf("запуск dnsmasq: %w (%s)", err, out)

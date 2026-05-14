@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/BataevDaniil/eleutherios/internal/ipset"
+	"github.com/BataevDaniil/eleutherios/internal/logging"
 	"github.com/BataevDaniil/eleutherios/internal/wg"
 )
 
@@ -31,7 +32,7 @@ func Setup(ctx context.Context, netName, wgName string) error {
 	if err := InstallHook(iface); err != nil {
 		return err
 	}
-	fmt.Printf("  iptables: %s DNS->%s, НЕ *.ru -> %s\n", iface, DNSPort, wgName)
+	logging.Logger().Info("iptables настроен", "component", "iptables", "iface", iface, "dns_port", DNSPort, "wg", wgName)
 	return nil
 }
 
@@ -81,5 +82,5 @@ func Cleanup(ctx context.Context) {
 	_ = exec.CommandContext(ctx, "iptables", "-t", "nat", "-X", ChainDNS).Run()
 	_ = exec.CommandContext(ctx, "iptables", "-t", "mangle", "-F", ChainMark).Run()
 	_ = exec.CommandContext(ctx, "iptables", "-t", "mangle", "-X", ChainMark).Run()
-	fmt.Println("  iptables очищены")
+	logging.Logger().Info("iptables очищены", "component", "iptables")
 }

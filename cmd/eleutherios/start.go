@@ -7,6 +7,7 @@ import (
 	"github.com/BataevDaniil/eleutherios/internal/dns"
 	"github.com/BataevDaniil/eleutherios/internal/ipset"
 	"github.com/BataevDaniil/eleutherios/internal/iptables"
+	"github.com/BataevDaniil/eleutherios/internal/logging"
 	wg2 "github.com/BataevDaniil/eleutherios/internal/wg"
 	"github.com/spf13/cobra"
 )
@@ -18,39 +19,40 @@ var startCmd = &cobra.Command{
 		ctx := cmd.Context()
 		wgCli, _ := cmd.Flags().GetString("wg")
 		netName, _ := cmd.Flags().GetString("net")
+		logger := logging.Logger()
 
-		fmt.Println("[1/6] Поднимаем WireGuard...")
+		logger.Info("Поднимаем WireGuard", "step", "1/6", "component", "wireguard")
 		entName, err := wg2.Up(ctx, wgCli)
 		if err != nil {
 			return fmt.Errorf("wg up: %w", err)
 		}
 
-		fmt.Println("[2/6] Создаём ipset...")
+		logger.Info("Создаём ipset", "step", "2/6", "component", "ipset")
 		if err := ipset.CreateSets(ctx); err != nil {
 			return fmt.Errorf("ipset: %w", err)
 		}
 
-		fmt.Println("[3/6] Настраиваем dnsmasq...")
+		logger.Info("Настраиваем dnsmasq", "step", "3/6", "component", "dnsmasq")
 		if err := dns.Configure(ctx); err != nil {
 			return fmt.Errorf("dnsmasq: %w", err)
 		}
 
-		fmt.Println("[4/6] Настраиваем iptables...")
+		logger.Info("Настраиваем iptables", "step", "4/6", "component", "iptables")
 		if err := iptables.Setup(ctx, netName, entName); err != nil {
 			return fmt.Errorf("iptables: %w", err)
 		}
 
-		fmt.Println("[5/6] Добавляем маршруты WireGuard...")
+		logger.Info("Добавляем маршруты WireGuard", "step", "5/6", "component", "wireguard")
 		if err := wg2.AddRoutes(ctx, entName); err != nil {
 			return fmt.Errorf("wg routes: %w", err)
 		}
 
-		fmt.Println("[6/6] Настраиваем автозапуск...")
+		logger.Info("Настраиваем автозапуск", "step", "6/6", "component", "boot")
 		if err := boot.Install(wgCli, netName); err != nil {
 			return fmt.Errorf("boot: %w", err)
 		}
 
-		fmt.Println("ГОТОВО: *.ru → ISP, остальное → WireGuard")
+		logger.Info("ГОТОВО: *.ru → ISP, остальное → WireGuard")
 		return nil
 	},
 }

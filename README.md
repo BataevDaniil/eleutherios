@@ -44,6 +44,18 @@ eleutherios status
 eleutherios stop
 ```
 
+## Логи
+
+Все команды пишут логи в `stdout`. Чтобы дополнительно сохранить их в файл, используйте глобальный флаг `--log-file`:
+
+```sh
+eleutherios start --wg Wireguard0 --net br0 --log-file /tmp/eleutherios.log
+```
+
+Формат логов — `slog.TextHandler`, близкий к `logfmt`: `time=... level=... msg=... component=...`. Ошибки логируются с `level=ERROR`.
+
+Если `start` был запущен с `--log-file`, установленные NDM hook-скрипты тоже будут писать в этот файл.
+
 ## Сборка
 
 Собрать бинарники для поддерживаемых архитектур Keenetic:

@@ -3,6 +3,8 @@ package wg
 import (
 	"context"
 	"fmt"
+
+	"github.com/BataevDaniil/eleutherios/internal/logging"
 )
 
 const apiBase = "http://127.0.0.1:79/rci"
@@ -35,7 +37,7 @@ func Up(ctx context.Context, cliName string) (string, error) {
 		return "", fmt.Errorf("linux-интерфейс для %s: %w", cliName, err)
 	}
 
-	fmt.Printf("  WireGuard: %s (%s) → %s\n", wg.Description, cliName, entName)
+	logging.Logger().Info("WireGuard поднят", "component", "wireguard", "description", wg.Description, "cli_name", cliName, "interface", entName)
 	return entName, nil
 }
 

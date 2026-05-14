@@ -6,6 +6,8 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+
+	"github.com/BataevDaniil/eleutherios/internal/logging"
 )
 
 func Cleanup(ctx context.Context) error {
@@ -20,7 +22,7 @@ func Cleanup(ctx context.Context) error {
 			return err
 		}
 	}
-	fmt.Printf("  dnsmasq: конфиг %s удалён\n", ConfFile)
+	logging.Logger().Info("dnsmasq конфиг удалён", "component", "dnsmasq", "config", ConfFile)
 	return nil
 }
 
@@ -35,7 +37,7 @@ func restoreBaseConfig() error {
 	if err := os.WriteFile(BaseConfFile, data, 0644); err != nil {
 		return fmt.Errorf("восстановление %s из %s: %w", BaseConfFile, BackupFile, err)
 	}
-	fmt.Printf("  dnsmasq: восстановлен %s из %s\n", BaseConfFile, BackupFile)
+	logging.Logger().Info("dnsmasq конфиг восстановлен", "component", "dnsmasq", "config", BaseConfFile, "backup", BackupFile)
 	return nil
 }
 
