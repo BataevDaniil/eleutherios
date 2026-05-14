@@ -8,6 +8,11 @@ VER=$(git describe --tags --always --dirty 2>/dev/null || echo "0.0.0-dev")
 ARCH="${1:-mipsel}"
 PKG_DIR="build/${APP}_${VER}_${ARCH}"
 
+if [ ! -f "build/$APP-$ARCH" ]; then
+    echo "Не найден build/$APP-$ARCH — сначала запустите helpers/build.sh" >&2
+    exit 1
+fi
+
 mkdir -p "$PKG_DIR/opt/bin"
 mkdir -p "$PKG_DIR/opt/etc"
 

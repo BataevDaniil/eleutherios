@@ -3,6 +3,7 @@ package eleutherios
 import (
 	"context"
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/BataevDaniil/eleutherios/internal/boot"
@@ -10,6 +11,10 @@ import (
 	"github.com/BataevDaniil/eleutherios/internal/logging"
 	"github.com/spf13/cobra"
 )
+
+// AnnotationRequiresRoot помечает команду как требующую root.
+// PersistentPreRunE падает с понятной ошибкой до запуска RunE.
+const AnnotationRequiresRoot = "requires-root"
 
 var iptablesHook bool
 var fsHook bool
@@ -29,6 +34,9 @@ var rootCmd = &cobra.Command{
 		}
 		if err := logging.Configure(path); err != nil {
 			return fmt.Errorf("log file: %w", err)
+		}
+		if needsRoot(cmd) && os.Geteuid() != 0 {
+			return fmt.Errorf("команда %q требует root (запустите от root или через sudo)", cmd.CommandPath())
 		}
 		return nil
 	},
@@ -57,8 +65,20 @@ var rootCmd = &cobra.Command{
 	},
 }
 
+// defaultTimeout — общий таймаут всей команды. На медленном роутере с холодным
+// dnsmasq и большим iptables-save 1 минуты прежнего лимита было тесно.
+// Перекрывается флагом --timeout.
+const defaultTimeout = 3 * time.Minute
+
 func Execute() error {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	// Парсим persistent-флаги вручную, чтобы вытащить --timeout до создания
+	// контекста. cobra потом распарсит их же повторно внутри ExecuteContext.
+	_ = rootCmd.ParseFlags(os.Args[1:])
+	timeout, _ := rootCmd.PersistentFlags().GetDuration("timeout")
+	if timeout <= 0 {
+		timeout = defaultTimeout
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 	err := rootCmd.ExecuteContext(ctx)
 	if err != nil {
@@ -70,12 +90,34 @@ func Execute() error {
 	return err
 }
 
+// needsRoot решает, нужен ли root для текущей команды.
+// Учитывает Annotations и скрытые hook-флаги rootCmd (--iptables-hook/--fs-hook),
+// потому что rootCmd сам по себе аннотацию не имеет: hook'и вызываются как `eleutherios --iptables-hook ...`.
+func needsRoot(cmd *cobra.Command) bool {
+	if cmd.Annotations[AnnotationRequiresRoot] == "true" {
+		return true
+	}
+	// rootCmd сам не имеет родителя; hook-режим запускается как `eleutherios --iptables-hook ...`.
+	if cmd.Parent() == nil && (iptablesHook || fsHook) {
+		return true
+	}
+	return false
+}
+
 func init() {
 	rootCmd.PersistentFlags().String("log-file", "", "путь к файлу логов")
+	rootCmd.PersistentFlags().Duration("timeout", defaultTimeout, "общий таймаут команды (напр. 30s, 5m)")
 	rootCmd.Flags().BoolVar(&iptablesHook, "iptables-hook", false, "восстановить iptables из NDM hook")
 	rootCmd.Flags().BoolVar(&fsHook, "fs-hook", false, "создать ipset из NDM fs hook")
 	rootCmd.Flags().StringVar(&hookNet, "net", "br0", "сеть для iptables hook")
-	rootCmd.Flags().MarkHidden("iptables-hook")
-	rootCmd.Flags().MarkHidden("fs-hook")
-	rootCmd.Flags().MarkHidden("net")
+	mustHide(rootCmd, "iptables-hook", "fs-hook", "net")
+}
+
+// mustHide вызывает MarkHidden и паникует при ошибке — флаг гарантированно объявлен выше.
+func mustHide(cmd *cobra.Command, names ...string) {
+	for _, n := range names {
+		if err := cmd.Flags().MarkHidden(n); err != nil {
+			panic(fmt.Sprintf("MarkHidden(%q): %v", n, err))
+		}
+	}
 }

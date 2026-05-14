@@ -2,6 +2,8 @@ package wg
 
 import (
 	"testing"
+
+	"github.com/BataevDaniil/eleutherios/internal/keenetic"
 )
 
 func TestFindIfaceByIP(t *testing.T) {
@@ -27,7 +29,7 @@ func TestFindIfaceByIP(t *testing.T) {
 }
 
 func TestFindWireguard(t *testing.T) {
-	ifaces := []ifaceRecord{
+	ifaces := []keenetic.Interface{
 		{ID: "Wireguard0", Type: "Wireguard", Description: "My VPN", State: "up"},
 		{ID: "Wireguard1", Type: "Wireguard", Description: "Work VPN", State: "down"},
 		{ID: "GigabitEthernet0", Type: "GigabitEthernet"},

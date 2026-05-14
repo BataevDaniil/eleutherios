@@ -11,8 +11,9 @@ import (
 )
 
 var stopCmd = &cobra.Command{
-	Use:   "stop",
-	Short: "Остановить обход, вернуть всё как было",
+	Use:         "stop",
+	Short:       "Остановить обход, вернуть всё как было",
+	Annotations: map[string]string{AnnotationRequiresRoot: "true"},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ctx := cmd.Context()
 		logger := logging.Logger()

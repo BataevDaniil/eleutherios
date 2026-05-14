@@ -7,6 +7,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/BataevDaniil/eleutherios/internal/fsutil"
 	"github.com/BataevDaniil/eleutherios/internal/logging"
 )
 
@@ -23,14 +24,10 @@ const (
 var baseConfigTemplate string
 
 func Configure(ctx context.Context) error {
-	data := strings.Join([]string{
-		"# eleutherios: *.ru остаётся в обычном интернете",
-		"ipset=/.ru/ELEUTHERIOS_RU",
-	}, "\n") + "\n"
 	if err := os.MkdirAll("/opt/etc/dnsmasq.d", 0755); err != nil {
 		return fmt.Errorf("создание dnsmasq.d: %w", err)
 	}
-	if err := os.WriteFile(ConfFile, []byte(data), 0644); err != nil {
+	if err := fsutil.WriteAtomic(ConfFile, []byte(renderOverlay()), 0644); err != nil {
 		return fmt.Errorf("запись %s: %w", ConfFile, err)
 	}
 	if err := ensureBaseConfig(); err != nil {
@@ -46,13 +43,27 @@ func Configure(ctx context.Context) error {
 	return nil
 }
 
+// renderOverlay возвращает содержимое /opt/etc/dnsmasq.d/eleutherios.dnsmasq.
+// Эта политика — "домены *.ru попадают в ipset ELEUTHERIOS_RU при резолве".
+func renderOverlay() string {
+	return strings.Join([]string{
+		"# eleutherios: *.ru остаётся в обычном интернете",
+		"ipset=/.ru/ELEUTHERIOS_RU",
+	}, "\n") + "\n"
+}
+
+// renderBaseConfig подставляет порт в встроенный шаблон dnsmasq.conf
+// и нормализует завершающие переводы строк.
+func renderBaseConfig(port string) string {
+	text := strings.ReplaceAll(baseConfigTemplate, "@PORT", port)
+	return strings.TrimRight(text, "\n") + "\n"
+}
+
 func ensureBaseConfig() error {
-	text := strings.ReplaceAll(baseConfigTemplate, "@PORT", Port)
-	text = strings.TrimRight(text, "\n") + "\n"
 	if err := backupBaseConfig(); err != nil {
 		return err
 	}
-	if err := os.WriteFile(BaseConfFile, []byte(text), 0644); err != nil {
+	if err := fsutil.WriteAtomic(BaseConfFile, []byte(renderBaseConfig(Port)), 0644); err != nil {
 		return fmt.Errorf("запись %s: %w", BaseConfFile, err)
 	}
 	return nil
@@ -69,7 +80,7 @@ func backupBaseConfig() error {
 		}
 		return fmt.Errorf("чтение %s для backup: %w", BaseConfFile, err)
 	}
-	if err := os.WriteFile(BackupFile, data, 0644); err != nil {
+	if err := fsutil.WriteAtomic(BackupFile, data, 0644); err != nil {
 		return fmt.Errorf("запись backup %s: %w", BackupFile, err)
 	}
 	return nil

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/BataevDaniil/eleutherios/internal/fsutil"
 	"github.com/BataevDaniil/eleutherios/internal/logging"
 )
 
@@ -35,11 +36,21 @@ func writeInit(bin, wgName, netName string) error {
 	if err := os.MkdirAll("/opt/etc/init.d", 0755); err != nil {
 		return fmt.Errorf("создание init.d: %w", err)
 	}
-	logFileArg := ""
-	if path := logging.LogFilePath(); path != "" {
-		logFileArg = fmt.Sprintf(" --log-file %q", path)
+	data := renderInit(bin, wgName, netName, logging.LogFilePath())
+	if err := fsutil.WriteAtomic(InitFile, []byte(data), 0755); err != nil {
+		return fmt.Errorf("запись %s: %w", InitFile, err)
 	}
-	data := fmt.Sprintf(`#!/bin/sh
+	return nil
+}
+
+// renderInit генерирует тело init.d-скрипта. Все аргументы попадают в shell
+// через %q — это безопасно квотирует пробелы и спецсимволы.
+func renderInit(bin, wgName, netName, logPath string) string {
+	logFileArg := ""
+	if logPath != "" {
+		logFileArg = fmt.Sprintf(" --log-file %q", logPath)
+	}
+	return fmt.Sprintf(`#!/bin/sh
 case "$1" in
 	start|restart)
 		exec %q start --wg %q --net %q%s
@@ -47,8 +58,4 @@ case "$1" in
 esac
 exit 0
 `, bin, wgName, netName, logFileArg)
-	if err := os.WriteFile(InitFile, []byte(data), 0755); err != nil {
-		return fmt.Errorf("запись %s: %w", InitFile, err)
-	}
-	return nil
 }

@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+
+	"github.com/BataevDaniil/eleutherios/internal/logging"
 )
 
 var ipRegex = regexp.MustCompile(`inet ([0-9.]+)/`)
@@ -35,6 +37,8 @@ func AddRoutes(ctx context.Context, name string) error {
 			return fmt.Errorf("%s: %w (%s)", args[0], err, out)
 		}
 	}
-	_, _ = execCmd(ctx, "ip", "route", "flush", "cache")
+	if out, err := execCmd(ctx, "ip", "route", "flush", "cache"); err != nil {
+		logging.Logger().Warn("ip route flush cache не удался", "component", "wg", "error", err, "output", out)
+	}
 	return nil
 }

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/BataevDaniil/eleutherios/internal/fsutil"
 	"github.com/BataevDaniil/eleutherios/internal/logging"
 )
 
@@ -25,7 +26,7 @@ func InstallHook(iface string) error {
 [ "$type" = "iptables" ] || exit 0
 exec %q --iptables-hook --net %q%s
 `, bin, iface, logFileArg)
-	if err := os.WriteFile(hookFile, []byte(data), 0755); err != nil {
+	if err := fsutil.WriteAtomic(hookFile, []byte(data), 0755); err != nil {
 		return fmt.Errorf("запись %s: %w", hookFile, err)
 	}
 	logging.Logger().Info("iptables hook установлен", "component", "hook", "hook", "iptables", "file", hookFile, "iface", iface)

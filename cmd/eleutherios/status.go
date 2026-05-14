@@ -15,8 +15,9 @@ import (
 )
 
 var statusCmd = &cobra.Command{
-	Use:   "status",
-	Short: "Показать текущий статус eleutherios",
+	Use:         "status",
+	Short:       "Показать текущий статус eleutherios",
+	Annotations: map[string]string{AnnotationRequiresRoot: "true"},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ctx := cmd.Context()
 		printHdr("WireGuard")
@@ -54,6 +55,9 @@ var statusCmd = &cobra.Command{
 
 func init() { rootCmd.AddCommand(statusCmd) }
 
+// statusIfaceRe выбирает интерфейсы, которые показывает `status`:
+//   - brN  — bridge-сети Keenetic (br0 = домашняя сеть, br1+ = гостевые).
+//   - nwgN — netfilter-имена WireGuard-интерфейсов в Entware.
 var statusIfaceRe = regexp.MustCompile(`^(br[0-9]+|nwg[0-9]+)$`)
 
 func printAddrForRelevantInterfaces(ctx context.Context) {

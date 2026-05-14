@@ -6,6 +6,7 @@ import (
 	"os/exec"
 	"strings"
 
+	"github.com/BataevDaniil/eleutherios/internal/dns"
 	"github.com/BataevDaniil/eleutherios/internal/ipset"
 	"github.com/BataevDaniil/eleutherios/internal/logging"
 	"github.com/BataevDaniil/eleutherios/internal/wg"
@@ -14,7 +15,6 @@ import (
 const (
 	ChainDNS  = "ELEUTHERIOS_DNS"
 	ChainMark = "ELEUTHERIOS_MARK"
-	DNSPort   = "9753"
 )
 
 func Setup(ctx context.Context, netName, wgName string) error {
@@ -32,14 +32,14 @@ func Setup(ctx context.Context, netName, wgName string) error {
 	if err := InstallHook(iface); err != nil {
 		return err
 	}
-	logging.Logger().Info("iptables настроен", "component", "iptables", "iface", iface, "dns_port", DNSPort, "wg", wgName)
+	logging.Logger().Info("iptables настроен", "component", "iptables", "iface", iface, "dns_port", dns.Port, "wg", wgName)
 	return nil
 }
 
 func natRules() [][]string {
 	return [][]string{
-		{"iptables", "-t", "nat", "-A", ChainDNS, "-p", "udp", "--dport", "53", "-j", "DNAT", "--to-destination", "127.0.0.1:" + DNSPort},
-		{"iptables", "-t", "nat", "-A", ChainDNS, "-p", "tcp", "--dport", "53", "-j", "DNAT", "--to-destination", "127.0.0.1:" + DNSPort},
+		{"iptables", "-t", "nat", "-A", ChainDNS, "-p", "udp", "--dport", "53", "-j", "DNAT", "--to-destination", "127.0.0.1:" + dns.Port},
+		{"iptables", "-t", "nat", "-A", ChainDNS, "-p", "tcp", "--dport", "53", "-j", "DNAT", "--to-destination", "127.0.0.1:" + dns.Port},
 	}
 }
 

@@ -8,18 +8,28 @@ import (
 	"github.com/BataevDaniil/eleutherios/internal/ipset"
 	"github.com/BataevDaniil/eleutherios/internal/iptables"
 	"github.com/BataevDaniil/eleutherios/internal/logging"
+	"github.com/BataevDaniil/eleutherios/internal/network"
 	wg2 "github.com/BataevDaniil/eleutherios/internal/wg"
 	"github.com/spf13/cobra"
 )
 
 var startCmd = &cobra.Command{
-	Use:   "start",
-	Short: "Запустить обход: *.ru → ISP, всё остальное → WireGuard",
+	Use:         "start",
+	Short:       "Запустить обход: *.ru → ISP, всё остальное → WireGuard",
+	Annotations: map[string]string{AnnotationRequiresRoot: "true"},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ctx := cmd.Context()
 		wgCli, _ := cmd.Flags().GetString("wg")
 		netName, _ := cmd.Flags().GetString("net")
 		logger := logging.Logger()
+
+		// Preflight: проверяем, что сеть существует, до любых системных изменений.
+		// Имя WireGuard проверится внутри wg.Up — там тоже есть подсказка со списком.
+		resolvedNet, err := network.ValidateIface(ctx, netName)
+		if err != nil {
+			return err
+		}
+		netName = resolvedNet
 
 		logger.Info("Поднимаем WireGuard", "step", "1/6", "component", "wireguard")
 		entName, err := wg2.Up(ctx, wgCli)

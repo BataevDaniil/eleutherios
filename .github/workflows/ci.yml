@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - run: go vet ./...
+      - run: go test -race ./...
+
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: mips
+            goarch: mips
+            gomips: softfloat
+          - arch: mipsel
+            goarch: mipsle
+            gomips: softfloat
+          - arch: aarch64
+            goarch: arm64
+            gomips: ""
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Build for ${{ matrix.arch }}
+        env:
+          GOOS: linux
+          GOARCH: ${{ matrix.goarch }}
+          GOMIPS: ${{ matrix.gomips }}
+        run: go build -ldflags="-s -w" -o build/eleutherios-${{ matrix.arch }} .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: eleutherios-${{ matrix.arch }}
+          path: build/eleutherios-${{ matrix.arch }}
+          retention-days: 7

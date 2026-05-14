@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/BataevDaniil/eleutherios/internal/keenetic"
 	"github.com/BataevDaniil/eleutherios/internal/logging"
 )
 
-const apiBase = "http://127.0.0.1:79/rci"
 const RouteTableID = 1001
 const MarkNum = "0xd1000"
 const RulePriority = "1778"
@@ -23,11 +23,15 @@ func Up(ctx context.Context, cliName string) (string, error) {
 
 	wg, cliName := findWireguard(ifaces, cliName)
 	if wg == nil {
-		return "", fmt.Errorf("WireGuard %q не найден. Проверьте имя интерфейса в панели Keenetic", requestedName)
+		available := listWireguardNames(ifaces)
+		if len(available) == 0 {
+			return "", fmt.Errorf("WireGuard %q не найден. В панели Keenetic нет ни одного WireGuard-интерфейса", requestedName)
+		}
+		return "", fmt.Errorf("WireGuard %q не найден. Доступные: %s", requestedName, strings.Join(available, ", "))
 	}
 
 	if wg.State == "down" {
-		_, err := httpPost(ctx, apiBase+"/interface/"+cliName, `{"up":"true"}`)
+		_, err := keenetic.Post(ctx, keenetic.APIBase+"/interface/"+cliName, `{"up":"true"}`)
 		if err != nil {
 			return "", fmt.Errorf("поднять %s: %w", cliName, err)
 		}
@@ -77,6 +81,21 @@ func Status(ctx context.Context) string {
 	}
 	if out == "" {
 		return "WireGuard не найден"
+	}
+	return out
+}
+
+func listWireguardNames(ifaces []keenetic.Interface) []string {
+	var out []string
+	for _, w := range ifaces {
+		if w.Type != "Wireguard" {
+			continue
+		}
+		name := w.ID
+		if w.Description != "" {
+			name = w.Description + " (" + w.ID + ")"
+		}
+		out = append(out, name)
 	}
 	return out
 }

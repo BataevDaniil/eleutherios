@@ -2,20 +2,11 @@ package network
 
 import (
 	"context"
-	"encoding/json"
-	"net/http"
 	"sort"
 	"strconv"
-)
 
-type ifaceRecord struct {
-	Address       string `json:"address"`
-	ID            string `json:"id"`
-	Index         int    `json:"index"`
-	Description   string `json:"description"`
-	InterfaceName string `json:"interface-name"`
-	Type          string `json:"type"`
-}
+	"github.com/BataevDaniil/eleutherios/internal/keenetic"
+)
 
 type Bridge struct {
 	Name        string
@@ -26,22 +17,12 @@ type Bridge struct {
 }
 
 func Bridges(ctx context.Context) []Bridge {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "http://127.0.0.1:79/rci/show/interface", nil)
+	ifaces, err := keenetic.ShowInterfaces(ctx)
 	if err != nil {
 		return nil
 	}
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return nil
-	}
-	defer resp.Body.Close()
-
-	var raw map[string]ifaceRecord
-	if err := json.NewDecoder(resp.Body).Decode(&raw); err != nil {
-		return nil
-	}
-	out := make([]Bridge, 0, len(raw))
-	for _, v := range raw {
+	out := make([]Bridge, 0, len(ifaces))
+	for _, v := range ifaces {
 		if v.Type != "Bridge" {
 			continue
 		}
@@ -57,7 +38,7 @@ func Bridges(ctx context.Context) []Bridge {
 	return out
 }
 
-func bridgeName(v ifaceRecord) string {
+func bridgeName(v keenetic.Interface) string {
 	if v.InterfaceName != "" {
 		return v.InterfaceName
 	}
