@@ -80,7 +80,7 @@ func printAddrForRelevantInterfaces(ctx context.Context) {
 func relevantInterfaces(ipLinkOut string) []string {
 	var ifaces []string
 	seen := map[string]bool{}
-	for _, line := range splitLines(ipLinkOut) {
+	for _, line := range strings.Split(ipLinkOut, "\n") {
 		parts := strings.SplitN(line, ":", 3)
 		if len(parts) < 2 {
 			continue

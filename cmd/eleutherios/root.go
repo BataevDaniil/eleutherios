@@ -3,8 +3,6 @@ package eleutherios
 import (
 	"context"
 	"fmt"
-	"os"
-	"strings"
 	"time"
 
 	"github.com/BataevDaniil/eleutherios/internal/boot"
@@ -16,11 +14,24 @@ import (
 var iptablesHook bool
 var fsHook bool
 var hookNet string
-var logFile string
+
+func SetVersion(v string) {
+	rootCmd.Version = v
+}
 
 var rootCmd = &cobra.Command{
 	Use:   "eleutherios",
 	Short: "WireGuard split-tunnel: *.ru → ISP, остальное → WG",
+	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+		path, _ := cmd.Flags().GetString("log-file")
+		if path == "" {
+			path, _ = cmd.Root().PersistentFlags().GetString("log-file")
+		}
+		if err := logging.Configure(path); err != nil {
+			return fmt.Errorf("log file: %w", err)
+		}
+		return nil
+	},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if fsHook {
 			logging.Logger().Info("Запуск fs hook", "component", "hook", "hook", "fs")
@@ -47,12 +58,6 @@ var rootCmd = &cobra.Command{
 }
 
 func Execute() error {
-	if err := logging.Configure(logFileFromArgs(os.Args[1:])); err != nil {
-		err = fmt.Errorf("log file: %w", err)
-		logging.Logger().Error("command failed", "error", err)
-		return err
-	}
-
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
 	err := rootCmd.ExecuteContext(ctx)
@@ -66,23 +71,11 @@ func Execute() error {
 }
 
 func init() {
-	rootCmd.PersistentFlags().StringVar(&logFile, "log-file", "", "путь к файлу логов")
+	rootCmd.PersistentFlags().String("log-file", "", "путь к файлу логов")
 	rootCmd.Flags().BoolVar(&iptablesHook, "iptables-hook", false, "восстановить iptables из NDM hook")
 	rootCmd.Flags().BoolVar(&fsHook, "fs-hook", false, "создать ipset из NDM fs hook")
 	rootCmd.Flags().StringVar(&hookNet, "net", "br0", "сеть для iptables hook")
 	rootCmd.Flags().MarkHidden("iptables-hook")
 	rootCmd.Flags().MarkHidden("fs-hook")
 	rootCmd.Flags().MarkHidden("net")
-}
-
-func logFileFromArgs(args []string) string {
-	for i, arg := range args {
-		if arg == "--log-file" && i+1 < len(args) {
-			return args[i+1]
-		}
-		if value, ok := strings.CutPrefix(arg, "--log-file="); ok {
-			return value
-		}
-	}
-	return ""
 }

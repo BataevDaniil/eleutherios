@@ -3,6 +3,7 @@ package wg
 import (
 	"context"
 	"fmt"
+	"strings"
 )
 
 func getEntwareName(ctx context.Context, cliName string, wg *ifaceRecord) (string, error) {
@@ -27,9 +28,9 @@ func ifaceExists(ctx context.Context, name string) bool {
 
 func findIfaceByIP(out, ip string) string {
 	current := ""
-	for _, line := range splitLines(out) {
-		if extractIfaceName(line) != "" {
-			current = extractIfaceName(line)
+	for _, line := range strings.Split(out, "\n") {
+		if name := extractIfaceName(line); name != "" {
+			current = name
 		}
 		if current != "" && containsWord(line, ip) {
 			return current
@@ -45,23 +46,11 @@ func extractIfaceName(line string) string {
 			if c1 < 0 {
 				c1 = i
 			} else {
-				return trimSpace(line[c1+1 : i])
+				return strings.TrimSpace(line[c1+1 : i])
 			}
 		}
 	}
 	return ""
-}
-
-func splitLines(s string) []string {
-	var out []string
-	start := 0
-	for i := 0; i < len(s); i++ {
-		if s[i] == '\n' {
-			out = append(out, s[start:i])
-			start = i + 1
-		}
-	}
-	return append(out, s[start:])
 }
 
 func containsWord(s, word string) bool {
@@ -84,13 +73,3 @@ func containsWord(s, word string) bool {
 }
 
 func isIPChar(c byte) bool { return (c >= '0' && c <= '9') || c == '.' }
-
-func trimSpace(s string) string {
-	for len(s) > 0 && s[0] == ' ' {
-		s = s[1:]
-	}
-	for len(s) > 0 && s[len(s)-1] == ' ' {
-		s = s[:len(s)-1]
-	}
-	return s
-}

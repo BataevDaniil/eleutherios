@@ -42,11 +42,10 @@ func Up(ctx context.Context, cliName string) (string, error) {
 }
 
 // Down чистит маршруты
-func Down(ctx context.Context) error {
+func Down(ctx context.Context) {
 	execCmd(ctx, "ip", "route", "flush", "table", fmt.Sprint(RouteTableID))
 	execCmd(ctx, "ip", "rule", "del", "fwmark", MarkNum+"/"+MarkNum, "table", fmt.Sprint(RouteTableID), "priority", RulePriority)
 	execCmd(ctx, "ip", "route", "flush", "cache")
-	return nil
 }
 
 // Status возвращает список WireGuard-интерфейсов

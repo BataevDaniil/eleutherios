@@ -4,7 +4,7 @@
 set -e
 
 APP="eleutherios"
-VER="0.1.0"
+VER=$(git describe --tags --always --dirty 2>/dev/null || echo "0.0.0-dev")
 ARCH="${1:-mipsel}"
 PKG_DIR="build/${APP}_${VER}_${ARCH}"
 

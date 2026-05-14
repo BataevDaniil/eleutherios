@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 	"os/exec"
+	"strings"
 )
 
 func httpGet(ctx context.Context, url string) (*http.Response, error) {
@@ -16,7 +17,7 @@ func httpGet(ctx context.Context, url string) (*http.Response, error) {
 }
 
 func httpPost(ctx context.Context, url, body string) (*http.Response, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, io.NopCloser(newStrReader(body)))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, io.NopCloser(strings.NewReader(body)))
 	if err != nil {
 		return nil, err
 	}
@@ -27,16 +28,4 @@ func httpPost(ctx context.Context, url, body string) (*http.Response, error) {
 func execCmd(ctx context.Context, name string, args ...string) (string, error) {
 	out, err := exec.CommandContext(ctx, name, args...).CombinedOutput()
 	return string(out), err
-}
-
-type strReader struct{ s string }
-
-func newStrReader(s string) *strReader { return &strReader{s} }
-func (r *strReader) Read(p []byte) (int, error) {
-	n := copy(p, r.s)
-	r.s = r.s[n:]
-	if len(r.s) == 0 {
-		return n, io.EOF
-	}
-	return n, nil
 }

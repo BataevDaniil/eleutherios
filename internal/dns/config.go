@@ -59,6 +59,9 @@ func ensureBaseConfig() error {
 }
 
 func backupBaseConfig() error {
+	if _, err := os.Stat(BackupFile); err == nil {
+		return nil
+	}
 	data, err := os.ReadFile(BaseConfFile)
 	if err != nil {
 		if os.IsNotExist(err) {

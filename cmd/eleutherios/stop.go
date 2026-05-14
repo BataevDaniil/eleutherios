@@ -1,8 +1,6 @@
 package eleutherios
 
 import (
-	"fmt"
-
 	"github.com/BataevDaniil/eleutherios/internal/boot"
 	"github.com/BataevDaniil/eleutherios/internal/dns"
 	"github.com/BataevDaniil/eleutherios/internal/ipset"
@@ -21,7 +19,7 @@ var stopCmd = &cobra.Command{
 
 		logger.Info("Убираем dnsmasq", "step", "1/5", "component", "dnsmasq")
 		if err := dns.Cleanup(ctx); err != nil {
-			return fmt.Errorf("dnsmasq cleanup: %w", err)
+			logger.Warn("dnsmasq cleanup провалился", "error", err)
 		}
 
 		logger.Info("Убираем iptables", "step", "2/5", "component", "iptables")

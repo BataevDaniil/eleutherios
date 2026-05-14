@@ -6,11 +6,12 @@ set -e
 
 APP="eleutherios"
 SRC="$(dirname "$0")/.."
+VER=$(git -C "$SRC" describe --tags --always --dirty 2>/dev/null || echo "dev")
 
 cd "$SRC"
 
 for arch in mips mipsel aarch64; do
-    echo "=== Сборка $APP для $arch ==="
+    echo "=== Сборка $APP для $arch (version: $VER) ==="
     case $arch in
         mips)
             export GOOS=linux
@@ -28,7 +29,7 @@ for arch in mips mipsel aarch64; do
             ;;
     esac
 
-    go build -ldflags="-s -w" -o "build/$APP-$arch" .
+    go build -ldflags="-s -w -X main.version=$VER" -o "build/$APP-$arch" .
     echo "  -> build/$APP-$arch готов"
 done
 
