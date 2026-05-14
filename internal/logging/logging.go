@@ -4,6 +4,7 @@ import (
 	"io"
 	"log/slog"
 	"os"
+	"path/filepath"
 )
 
 var (
@@ -16,6 +17,13 @@ var (
 
 func Configure(path string) error {
 	writer := io.Writer(os.Stdout)
+	if path != "" {
+		abs, err := filepath.Abs(path)
+		if err != nil {
+			return err
+		}
+		path = abs
+	}
 	logPath = path
 	if path != "" {
 		file, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
