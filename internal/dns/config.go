@@ -47,8 +47,11 @@ func Configure(ctx context.Context) error {
 // Эта политика — "домены *.ru попадают в ipset ELEUTHERIOS_RU при резолве".
 func renderOverlay() string {
 	return strings.Join([]string{
-		"# eleutherios: *.ru остаётся в обычном интернете",
 		"ipset=/.ru/ELEUTHERIOS_RU",
+		//.рф
+		"ipset=/.xn--p1ai/ELEUTHERIOS_RU",
+		//.рус
+		"ipset=/.xn--p1acf/ELEUTHERIOS_RU",
 	}, "\n") + "\n"
 }
 
