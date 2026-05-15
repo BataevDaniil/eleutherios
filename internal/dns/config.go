@@ -23,6 +23,9 @@ const (
 //go:embed dnsmasq.conf
 var baseConfigTemplate string
 
+//go:embed overlay.dnsmasq
+var overlayConfig string
+
 func Configure(ctx context.Context) error {
 	if err := os.MkdirAll("/opt/etc/dnsmasq.d", 0755); err != nil {
 		return fmt.Errorf("создание dnsmasq.d: %w", err)
@@ -45,14 +48,9 @@ func Configure(ctx context.Context) error {
 
 // renderOverlay возвращает содержимое /opt/etc/dnsmasq.d/eleutherios.dnsmasq.
 // Эта политика — "домены *.ru попадают в ipset ELEUTHERIOS_RU при резолве".
+// Список доменов задаётся в overlay.dnsmasq.
 func renderOverlay() string {
-	return strings.Join([]string{
-		"ipset=/.ru/ELEUTHERIOS_RU",
-		//.рф
-		"ipset=/.xn--p1ai/ELEUTHERIOS_RU",
-		//.рус
-		"ipset=/.xn--p1acf/ELEUTHERIOS_RU",
-	}, "\n") + "\n"
+	return strings.TrimRight(overlayConfig, "\n") + "\n"
 }
 
 // renderBaseConfig подставляет порт в встроенный шаблон dnsmasq.conf
