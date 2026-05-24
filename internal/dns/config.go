@@ -18,9 +18,9 @@ const (
 	InitFile     = "/opt/etc/init.d/S56dnsmasq"
 	PIDFile      = "/var/run/opt-dnsmasq.pid"
 	Port         = "9753"
-	// managedMarker помечает наш сгенерированный конфиг, чтобы backup/restore
-	// могли отличить «оригинал пользователя» от «уже наш конфиг» и не сохранили
-	// испорченный backup, из-за которого stop возвращал port=9753 вместо :53.
+	// managedMarker — метка в нашем сгенерированном конфиге. Используем при
+	// backup чтобы не сохранить уже-наш файл как «оригинал» (этот баг ломал stop:
+	// .backup содержал port=9753, и DNS не возвращался к работающему).
 	managedMarker = "# ELEUTHERIOS-MANAGED"
 )
 
@@ -40,8 +40,11 @@ func Configure(ctx context.Context) error {
 	if err := fsutil.WriteAtomic(ConfFile, []byte(renderOverlay()), 0644); err != nil {
 		return fmt.Errorf("запись %s: %w", ConfFile, err)
 	}
-	if err := ensureBaseConfig(); err != nil {
+	if err := backupBaseConfig(); err != nil {
 		return err
+	}
+	if err := fsutil.WriteAtomic(BaseConfFile, []byte(renderBaseConfig(Port)), 0644); err != nil {
+		return fmt.Errorf("запись %s: %w", BaseConfFile, err)
 	}
 	if _, err := ensureRunning(ctx); err != nil {
 		return err
@@ -67,19 +70,11 @@ func renderBaseConfig(port string) string {
 	return strings.TrimRight(text, "\n") + "\n"
 }
 
-func ensureBaseConfig() error {
-	if err := backupBaseConfig(); err != nil {
-		return err
-	}
-	if err := fsutil.WriteAtomic(BaseConfFile, []byte(renderBaseConfig(Port)), 0644); err != nil {
-		return fmt.Errorf("запись %s: %w", BaseConfFile, err)
-	}
-	return nil
-}
-
-// backupBaseConfig сохраняет «оригинальный» dnsmasq.conf один раз.
-// Если текущий файл уже наш (с managedMarker) — за оригинал берём embedded
-// rollback, иначе stop восстановит наш же port=9753 и DNS останется сломан.
+// backupBaseConfig сохраняет текущий /opt/etc/dnsmasq.conf в .backup один раз.
+// Stop сам бэкап не использует — он просто гасит dnsmasq и пишет rollback.
+// Файл нужен только для ручного восстановления, если пользователь хочет вернуть
+// свой dnsmasq.conf. Если текущий конфиг уже наш (managedMarker) — не трогаем,
+// иначе при повторных start затрём настоящий оригинал.
 func backupBaseConfig() error {
 	if _, err := os.Stat(BackupFile); err == nil {
 		return nil
@@ -87,19 +82,15 @@ func backupBaseConfig() error {
 	data, err := os.ReadFile(BaseConfFile)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return fsutil.WriteAtomic(BackupFile, []byte(rollbackConfig), 0644)
+			return nil
 		}
 		return fmt.Errorf("чтение %s для backup: %w", BaseConfFile, err)
 	}
-	if isManagedConfig(data) {
-		data = []byte(rollbackConfig)
+	if strings.Contains(string(data), managedMarker) {
+		return nil
 	}
 	if err := fsutil.WriteAtomic(BackupFile, data, 0644); err != nil {
 		return fmt.Errorf("запись backup %s: %w", BackupFile, err)
 	}
 	return nil
-}
-
-func isManagedConfig(data []byte) bool {
-	return strings.Contains(string(data), managedMarker)
 }

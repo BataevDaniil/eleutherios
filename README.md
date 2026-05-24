@@ -58,7 +58,7 @@ eleutherios stop
 
 1. Поднимает WireGuard через RCI Keenetic (если он был выключен).
 2. Создаёт ipset `ELEUTHERIOS_RU` (для `*.ru`) и `ELEUTHERIOS_EXCLUDED` (приватные сети, multicast и т.п.).
-3. Пишет конфиг dnsmasq в `/opt/etc/dnsmasq.d/eleutherios.dnsmasq` (домены `*.ru` попадают в ipset), бэкапит и подменяет `/opt/etc/dnsmasq.conf`, перезапускает dnsmasq на порту 9753.
+3. Пишет конфиг dnsmasq в `/opt/etc/dnsmasq.d/eleutherios.dnsmasq` (домены `*.ru` попадают в ipset), подменяет `/opt/etc/dnsmasq.conf`, перезапускает dnsmasq на порту 9753. `stop` остановит этот dnsmasq совсем — DNS клиентов после этого обслужит встроенный в Keenetic NDM, как было до старта.
 4. Настраивает iptables: цепочка `ELEUTHERIOS_DNS` редиректит DNS на dnsmasq, `ELEUTHERIOS_MARK` ставит fwmark на пакеты для туннеля.
 5. Добавляет маршрут по умолчанию в отдельной таблице (`RouteTableID=1001`) через WG, и `ip rule` по fwmark.
 6. Ставит автозапуск: `/opt/etc/init.d/S96eleutherios` и NDM hook `/opt/etc/ndm/fs.d/15-eleutherios-start.sh`, плюс netfilter hook `/opt/etc/ndm/netfilter.d/100-eleutherios` для восстановления правил после ребута/реконфига.
@@ -74,14 +74,13 @@ rm -f /opt/etc/init.d/S96eleutherios
 rm -f /opt/etc/ndm/fs.d/15-eleutherios-start.sh
 rm -f /opt/etc/ndm/netfilter.d/100-eleutherios
 rm -f /opt/etc/dnsmasq.d/eleutherios.dnsmasq
-mv /opt/etc/dnsmasq.conf.backup /opt/etc/dnsmasq.conf 2>/dev/null
 ipset destroy ELEUTHERIOS_RU
 ipset destroy ELEUTHERIOS_EXCLUDED
 iptables -t nat -F ELEUTHERIOS_DNS && iptables -t nat -X ELEUTHERIOS_DNS
 iptables -t mangle -F ELEUTHERIOS_MARK && iptables -t mangle -X ELEUTHERIOS_MARK
 ip route flush table 1001
 ip rule del fwmark 0xd1000/0xd1000 table 1001 priority 1778
-/opt/etc/init.d/S56dnsmasq restart
+/opt/etc/init.d/S56dnsmasq stop
 ```
 
 ## Логи

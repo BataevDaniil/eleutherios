@@ -10,52 +10,35 @@ import (
 	"github.com/BataevDaniil/eleutherios/internal/logging"
 )
 
+// Cleanup останавливает Entware dnsmasq и возвращает /opt/etc/dnsmasq.conf
+// в безопасный embedded rollback. DNS клиентов после этого обслуживает
+// встроенный в Keenetic NDM (ndnproxy + iptables redirect на :53) — то же
+// состояние, что было до eleutherios start.
 func Cleanup(ctx context.Context) error {
 	if err := os.Remove(ConfFile); err != nil && !os.IsNotExist(err) {
 		return fmt.Errorf("удаление %s: %w", ConfFile, err)
 	}
-	if err := restoreBaseConfig(); err != nil {
+	if err := os.WriteFile(BaseConfFile, []byte(rollbackConfig), 0644); err != nil {
+		return fmt.Errorf("запись %s: %w", BaseConfFile, err)
+	}
+	if err := stopDnsmasq(ctx); err != nil {
 		return err
 	}
-	if readPID(PIDFile) != "" || pidOf(ctx, "dnsmasq") != "" {
-		if err := restart(ctx); err != nil {
-			return err
-		}
-	}
-	logging.Logger().Info("dnsmasq конфиг удалён", "component", "dnsmasq", "config", ConfFile)
+	logging.Logger().Info("dnsmasq остановлен, DNS обслуживается NDM", "component", "dnsmasq", "config", BaseConfFile)
 	return nil
 }
 
-// restoreBaseConfig возвращает оригинальный dnsmasq.conf.
-// Если backup отсутствует или сам содержит наш managedMarker (значит был
-// испорчен — записан уже после первой подмены), пишем embedded rollback,
-// чтобы dnsmasq после рестарта не остался на нашем port=9753.
-func restoreBaseConfig() error {
-	data, err := os.ReadFile(BackupFile)
+func stopDnsmasq(ctx context.Context) error {
+	if readPID(PIDFile) == "" && pidOf(ctx, "dnsmasq") == "" {
+		return nil
+	}
+	if _, err := os.Stat(InitFile); err != nil {
+		return nil
+	}
+	out, err := exec.CommandContext(ctx, InitFile, "stop").CombinedOutput()
 	if err != nil {
-		if os.IsNotExist(err) {
-			return writeRollback("backup отсутствует")
-		}
-		return fmt.Errorf("чтение backup %s: %w", BackupFile, err)
+		return fmt.Errorf("остановка dnsmasq: %w (%s)", err, out)
 	}
-	source := BackupFile
-	if isManagedConfig(data) {
-		data = []byte(rollbackConfig)
-		source = "embedded rollback"
-		logging.Logger().Warn("backup dnsmasq.conf содержит наш marker — восстанавливаем из embedded rollback", "component", "dnsmasq", "backup", BackupFile)
-	}
-	if err := os.WriteFile(BaseConfFile, data, 0644); err != nil {
-		return fmt.Errorf("восстановление %s из %s: %w", BaseConfFile, source, err)
-	}
-	logging.Logger().Info("dnsmasq конфиг восстановлен", "component", "dnsmasq", "config", BaseConfFile, "source", source)
-	return nil
-}
-
-func writeRollback(reason string) error {
-	if err := os.WriteFile(BaseConfFile, []byte(rollbackConfig), 0644); err != nil {
-		return fmt.Errorf("запись rollback %s: %w", BaseConfFile, err)
-	}
-	logging.Logger().Info("dnsmasq конфиг восстановлен из embedded rollback", "component", "dnsmasq", "config", BaseConfFile, "reason", reason)
 	return nil
 }
 
