@@ -18,19 +18,22 @@ var stopCmd = &cobra.Command{
 		ctx := cmd.Context()
 		logger := logging.Logger()
 
-		logger.Info("Убираем dnsmasq", "step", "1/5", "component", "dnsmasq")
+		// Порядок важен: iptables должен сняться раньше, чем мы трогаем dnsmasq.
+		// Иначе пока dnsmasq рестартится на 53, активный DNAT всё ещё гонит
+		// :53 → 127.0.0.1:9753, где уже никто не слушает — клиенты теряют DNS.
+		logger.Info("Убираем iptables", "step", "1/5", "component", "iptables")
+		iptables.Cleanup(ctx)
+
+		logger.Info("Убираем маршруты WireGuard", "step", "2/5", "component", "wireguard")
+		wg.Down(ctx)
+
+		logger.Info("Убираем dnsmasq", "step", "3/5", "component", "dnsmasq")
 		if err := dns.Cleanup(ctx); err != nil {
 			logger.Warn("dnsmasq cleanup провалился", "error", err)
 		}
 
-		logger.Info("Убираем iptables", "step", "2/5", "component", "iptables")
-		iptables.Cleanup(ctx)
-
-		logger.Info("Убираем ipset", "step", "3/5", "component", "ipset")
+		logger.Info("Убираем ipset", "step", "4/5", "component", "ipset")
 		ipset.DestroySets(ctx)
-
-		logger.Info("Убираем маршруты WireGuard", "step", "4/5", "component", "wireguard")
-		wg.Down(ctx)
 
 		logger.Info("Убираем автозапуск", "step", "5/5", "component", "boot")
 		boot.Remove()
