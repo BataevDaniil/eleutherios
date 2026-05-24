@@ -58,11 +58,11 @@ func mangleRules() [][]string {
 }
 
 func ensurePreroutingJump(ctx context.Context, table, iface, target string, first bool) error {
-	check := []string{"-t", table, "-C", "PREROUTING", "-i", iface, "-j", target}
+	check := []string{"-w", "-t", table, "-C", "PREROUTING", "-i", iface, "-j", target}
 	if exec.CommandContext(ctx, "iptables", check...).Run() == nil {
 		return nil
 	}
-	args := []string{"-t", table, "-I", "PREROUTING"}
+	args := []string{"-w", "-t", table, "-I", "PREROUTING"}
 	if first {
 		args = append(args, "1")
 	}

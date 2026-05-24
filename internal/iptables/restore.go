@@ -1,6 +1,7 @@
 package iptables
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"os"
@@ -37,11 +38,14 @@ func RunHook(ctx context.Context, iface string) error {
 }
 
 func restoreNat(ctx context.Context, iface string) error {
-	if err := ensureChain(ctx, "nat", ChainDNS); err != nil {
-		return err
-	}
-	if err := apply(ctx, natRules()); err != nil {
-		return err
+	if !chainExists(ctx, "nat", ChainDNS) {
+		out, err := exec.CommandContext(ctx, "iptables", "-w", "-t", "nat", "-N", ChainDNS).CombinedOutput()
+		if err != nil {
+			return fmt.Errorf("iptables -t nat -N %s: %w (%s)", ChainDNS, err, out)
+		}
+		if err := apply(ctx, natRules()); err != nil {
+			return err
+		}
 	}
 	return ensurePreroutingJump(ctx, "nat", iface, ChainDNS, true)
 }
@@ -50,29 +54,32 @@ func restoreMangle(ctx context.Context, iface string) error {
 	if err := ipset.CreateSets(ctx); err != nil {
 		return err
 	}
-	if err := ensureChain(ctx, "mangle", ChainMark); err != nil {
-		return err
-	}
-	if err := apply(ctx, mangleRules()); err != nil {
-		return err
+	if !chainExists(ctx, "mangle", ChainMark) {
+		out, err := exec.CommandContext(ctx, "iptables", "-w", "-t", "mangle", "-N", ChainMark).CombinedOutput()
+		if err != nil {
+			return fmt.Errorf("iptables -t mangle -N %s: %w (%s)", ChainMark, err, out)
+		}
+		if err := apply(ctx, mangleRules()); err != nil {
+			return err
+		}
 	}
 	return ensurePreroutingJump(ctx, "mangle", iface, ChainMark, false)
 }
 
-func ensureChain(ctx context.Context, table, chain string) error {
-	if exec.CommandContext(ctx, "iptables", "-t", table, "-F", chain).Run() == nil {
-		return nil
-	}
-	out, err := exec.CommandContext(ctx, "iptables", "-t", table, "-N", chain).CombinedOutput()
+// chainExists проверяет наличие цепочки через iptables-save (read-only, без side effects).
+// Аналог ip4__chain__is_exist в kvas.
+func chainExists(ctx context.Context, table, chain string) bool {
+	out, err := exec.CommandContext(ctx, "iptables-save", "-t", table).Output()
 	if err != nil {
-		return fmt.Errorf("iptables -t %s -N %s: %w (%s)", table, chain, err, out)
+		return false
 	}
-	return nil
+	return bytes.Contains(out, []byte(":"+chain+" "))
 }
 
 func apply(ctx context.Context, rules [][]string) error {
 	for _, args := range rules {
-		out, err := exec.CommandContext(ctx, args[0], args[1:]...).CombinedOutput()
+		withWait := append([]string{args[0], "-w"}, args[1:]...)
+		out, err := exec.CommandContext(ctx, withWait[0], withWait[1:]...).CombinedOutput()
 		if err != nil {
 			return fmt.Errorf("%v: %w (%s)", args, err, out)
 		}
