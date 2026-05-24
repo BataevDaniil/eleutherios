@@ -26,18 +26,36 @@ func Cleanup(ctx context.Context) error {
 	return nil
 }
 
+// restoreBaseConfig возвращает оригинальный dnsmasq.conf.
+// Если backup отсутствует или сам содержит наш managedMarker (значит был
+// испорчен — записан уже после первой подмены), пишем embedded rollback,
+// чтобы dnsmasq после рестарта не остался на нашем port=9753.
 func restoreBaseConfig() error {
 	data, err := os.ReadFile(BackupFile)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil
+			return writeRollback("backup отсутствует")
 		}
 		return fmt.Errorf("чтение backup %s: %w", BackupFile, err)
 	}
-	if err := os.WriteFile(BaseConfFile, data, 0644); err != nil {
-		return fmt.Errorf("восстановление %s из %s: %w", BaseConfFile, BackupFile, err)
+	source := BackupFile
+	if isManagedConfig(data) {
+		data = []byte(rollbackConfig)
+		source = "embedded rollback"
+		logging.Logger().Warn("backup dnsmasq.conf содержит наш marker — восстанавливаем из embedded rollback", "component", "dnsmasq", "backup", BackupFile)
 	}
-	logging.Logger().Info("dnsmasq конфиг восстановлен", "component", "dnsmasq", "config", BaseConfFile, "backup", BackupFile)
+	if err := os.WriteFile(BaseConfFile, data, 0644); err != nil {
+		return fmt.Errorf("восстановление %s из %s: %w", BaseConfFile, source, err)
+	}
+	logging.Logger().Info("dnsmasq конфиг восстановлен", "component", "dnsmasq", "config", BaseConfFile, "source", source)
+	return nil
+}
+
+func writeRollback(reason string) error {
+	if err := os.WriteFile(BaseConfFile, []byte(rollbackConfig), 0644); err != nil {
+		return fmt.Errorf("запись rollback %s: %w", BaseConfFile, err)
+	}
+	logging.Logger().Info("dnsmasq конфиг восстановлен из embedded rollback", "component", "dnsmasq", "config", BaseConfFile, "reason", reason)
 	return nil
 }
 
