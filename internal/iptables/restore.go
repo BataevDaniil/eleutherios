@@ -44,7 +44,14 @@ func restoreNat(ctx context.Context, iface string) error {
 			return err
 		}
 	}
-	return ensurePreroutingJump(ctx, "nat", iface, ChainDNS, true)
+	if err := ensurePreroutingJump(ctx, "nat", iface, ChainDNS, true); err != nil {
+		// Цепочка исчезла между chainExists и ensurePreroutingJump (TOCTOU-гонка с NDM).
+		if err2 := applyViaRestore(ctx, "nat", ChainDNS, natRules()); err2 != nil {
+			return err2
+		}
+		return ensurePreroutingJump(ctx, "nat", iface, ChainDNS, true)
+	}
+	return nil
 }
 
 func restoreMangle(ctx context.Context, iface string) error {
@@ -56,7 +63,13 @@ func restoreMangle(ctx context.Context, iface string) error {
 			return err
 		}
 	}
-	return ensurePreroutingJump(ctx, "mangle", iface, ChainMark, false)
+	if err := ensurePreroutingJump(ctx, "mangle", iface, ChainMark, false); err != nil {
+		if err2 := applyViaRestore(ctx, "mangle", ChainMark, mangleRules()); err2 != nil {
+			return err2
+		}
+		return ensurePreroutingJump(ctx, "mangle", iface, ChainMark, false)
+	}
+	return nil
 }
 
 // chainExists проверяет наличие цепочки через iptables-save (read-only, без side effects).
@@ -75,6 +88,7 @@ func applyViaRestore(ctx context.Context, table, chain string, rules [][]string)
 	var b strings.Builder
 	fmt.Fprintf(&b, "*%s\n", table)
 	fmt.Fprintf(&b, ":%s - [0:0]\n", chain)
+	fmt.Fprintf(&b, "-F %s\n", chain)
 	for _, rule := range rules {
 		// Правила хранятся как ["iptables", "-t", "TABLE", "-A", "CHAIN", ...]
 		// iptables-restore принимает начиная с "-A": "-A CHAIN ..."
