@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"strings"
 
 	"github.com/BataevDaniil/eleutherios/internal/ipset"
 	"github.com/BataevDaniil/eleutherios/internal/logging"
@@ -39,11 +40,7 @@ func RunHook(ctx context.Context, iface string) error {
 
 func restoreNat(ctx context.Context, iface string) error {
 	if !chainExists(ctx, "nat", ChainDNS) {
-		out, err := exec.CommandContext(ctx, "iptables", "-w", "-t", "nat", "-N", ChainDNS).CombinedOutput()
-		if err != nil {
-			return fmt.Errorf("iptables -t nat -N %s: %w (%s)", ChainDNS, err, out)
-		}
-		if err := apply(ctx, natRules()); err != nil {
+		if err := applyViaRestore(ctx, "nat", ChainDNS, natRules()); err != nil {
 			return err
 		}
 	}
@@ -55,11 +52,7 @@ func restoreMangle(ctx context.Context, iface string) error {
 		return err
 	}
 	if !chainExists(ctx, "mangle", ChainMark) {
-		out, err := exec.CommandContext(ctx, "iptables", "-w", "-t", "mangle", "-N", ChainMark).CombinedOutput()
-		if err != nil {
-			return fmt.Errorf("iptables -t mangle -N %s: %w (%s)", ChainMark, err, out)
-		}
-		if err := apply(ctx, mangleRules()); err != nil {
+		if err := applyViaRestore(ctx, "mangle", ChainMark, mangleRules()); err != nil {
 			return err
 		}
 	}
@@ -76,13 +69,24 @@ func chainExists(ctx context.Context, table, chain string) bool {
 	return bytes.Contains(out, []byte(":"+chain+" "))
 }
 
-func apply(ctx context.Context, rules [][]string) error {
-	for _, args := range rules {
-		withWait := append([]string{args[0], "-w"}, args[1:]...)
-		out, err := exec.CommandContext(ctx, withWait[0], withWait[1:]...).CombinedOutput()
-		if err != nil {
-			return fmt.Errorf("%v: %w (%s)", args, err, out)
-		}
+// applyViaRestore применяет цепочку и все правила одним атомарным вызовом iptables-restore --noflush.
+// В отличие от N последовательных вызовов iptables, здесь NDM не может удалить цепочку между правилами.
+func applyViaRestore(ctx context.Context, table, chain string, rules [][]string) error {
+	var b strings.Builder
+	fmt.Fprintf(&b, "*%s\n", table)
+	fmt.Fprintf(&b, ":%s - [0:0]\n", chain)
+	for _, rule := range rules {
+		// Правила хранятся как ["iptables", "-t", "TABLE", "-A", "CHAIN", ...]
+		// iptables-restore принимает начиная с "-A": "-A CHAIN ..."
+		fmt.Fprintf(&b, "%s\n", strings.Join(rule[3:], " "))
+	}
+	b.WriteString("COMMIT\n")
+
+	cmd := exec.CommandContext(ctx, "iptables-restore", "--noflush")
+	cmd.Stdin = strings.NewReader(b.String())
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("iptables-restore -t %s: %w (%s)", table, err, out)
 	}
 	return nil
 }
