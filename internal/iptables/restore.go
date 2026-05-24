@@ -37,8 +37,9 @@ func RunHook(ctx context.Context, iface string) error {
 }
 
 func restoreNat(ctx context.Context, iface string) error {
-	_ = exec.CommandContext(ctx, "iptables", "-t", "nat", "-N", ChainDNS).Run()
-	_ = exec.CommandContext(ctx, "iptables", "-t", "nat", "-F", ChainDNS).Run()
+	if err := ensureChain(ctx, "nat", ChainDNS); err != nil {
+		return err
+	}
 	if err := apply(ctx, natRules()); err != nil {
 		return err
 	}
@@ -49,12 +50,24 @@ func restoreMangle(ctx context.Context, iface string) error {
 	if err := ipset.CreateSets(ctx); err != nil {
 		return err
 	}
-	_ = exec.CommandContext(ctx, "iptables", "-t", "mangle", "-N", ChainMark).Run()
-	_ = exec.CommandContext(ctx, "iptables", "-t", "mangle", "-F", ChainMark).Run()
+	if err := ensureChain(ctx, "mangle", ChainMark); err != nil {
+		return err
+	}
 	if err := apply(ctx, mangleRules()); err != nil {
 		return err
 	}
 	return ensurePreroutingJump(ctx, "mangle", iface, ChainMark, false)
+}
+
+func ensureChain(ctx context.Context, table, chain string) error {
+	if exec.CommandContext(ctx, "iptables", "-t", table, "-F", chain).Run() == nil {
+		return nil
+	}
+	out, err := exec.CommandContext(ctx, "iptables", "-t", table, "-N", chain).CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("iptables -t %s -N %s: %w (%s)", table, chain, err, out)
+	}
+	return nil
 }
 
 func apply(ctx context.Context, rules [][]string) error {
