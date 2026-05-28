@@ -10,34 +10,40 @@ import (
 	"github.com/BataevDaniil/eleutherios/internal/logging"
 )
 
-// Cleanup останавливает Entware dnsmasq и возвращает /opt/etc/dnsmasq.conf
-// в безопасный embedded rollback. DNS клиентов после этого обслуживает
-// встроенный в Keenetic NDM (ndnproxy + iptables redirect на :53) — то же
-// состояние, что было до eleutherios start.
+// Cleanup возвращает dnsmasq в исходное состояние: восстанавливает оригинальный
+// конфиг из backup'а (или rollback-конфиг если backup не сохранён) и перезапускает
+// dnsmasq. DNS на роутере продолжает работать так же, как до eleutherios start.
 func Cleanup(ctx context.Context) error {
 	if err := os.Remove(ConfFile); err != nil && !os.IsNotExist(err) {
 		return fmt.Errorf("удаление %s: %w", ConfFile, err)
 	}
-	if err := os.WriteFile(BaseConfFile, []byte(rollbackConfig), 0644); err != nil {
-		return fmt.Errorf("запись %s: %w", BaseConfFile, err)
+	if _, err := os.Stat(InitFile); err != nil {
+		logging.Logger().Info("dnsmasq не установлен, пропускаем", "component", "dnsmasq")
+		return nil
 	}
-	if err := stopDnsmasq(ctx); err != nil {
+	if err := restoreBaseConfig(); err != nil {
 		return err
 	}
-	logging.Logger().Info("dnsmasq остановлен, DNS обслуживается NDM", "component", "dnsmasq", "config", BaseConfFile)
+	if err := restart(ctx); err != nil {
+		return err
+	}
+	logging.Logger().Info("dnsmasq перезапущен с оригинальной конфигурацией", "component", "dnsmasq", "config", BaseConfFile)
 	return nil
 }
 
-func stopDnsmasq(ctx context.Context) error {
-	if readPID(PIDFile) == "" && pidOf(ctx, "dnsmasq") == "" {
+func restoreBaseConfig() error {
+	backup, err := os.ReadFile(BackupFile)
+	if err == nil {
+		if wErr := os.WriteFile(BaseConfFile, backup, 0644); wErr != nil {
+			return fmt.Errorf("восстановление %s из backup: %w", BaseConfFile, wErr)
+		}
 		return nil
 	}
-	if _, err := os.Stat(InitFile); err != nil {
-		return nil
+	if !os.IsNotExist(err) {
+		return fmt.Errorf("чтение backup %s: %w", BackupFile, err)
 	}
-	out, err := exec.CommandContext(ctx, InitFile, "stop").CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("остановка dnsmasq: %w (%s)", err, out)
+	if wErr := os.WriteFile(BaseConfFile, []byte(rollbackConfig), 0644); wErr != nil {
+		return fmt.Errorf("запись rollback %s: %w", BaseConfFile, wErr)
 	}
 	return nil
 }
