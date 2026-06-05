@@ -4,6 +4,9 @@ ipset=/.xn--p1ai/ELEUTHERIOS_RU
 #.рус
 ipset=/.xn--p1acf/ELEUTHERIOS_RU
 
+ipset=/.helpdeskeddy.com/ELEUTHERIOS_RU
+ipset=/.zvukogram.com/ELEUTHERIOS_RU
+
 # yandex source https://github.com/v2fly/domain-list-community/blob/master/data/yandex
 ipset=/.cabconnect.org/ELEUTHERIOS_RU
 ipset=/.clstorage.net/ELEUTHERIOS_RU
